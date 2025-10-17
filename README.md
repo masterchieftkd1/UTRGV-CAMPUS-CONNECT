@@ -10,58 +10,57 @@ Java/Python/C++
 
 
 Features:
+- Facial Recognition,
 
-Facial Recognition,
+- Account Creation,
 
-Account Creation,
+- Log in/log out,
 
-Log in/log out,
+- Database,
 
-Database,
+- Require utrgv email,
 
-Require utrgv email,
+- Require phone verification,
 
-Require phone verification,
+- Email verification,
 
-Email verification,
+- Search (interests, hobbies, people),
 
-Search (interests, hobbies, people),
+- Accept Request (Then could message),
 
-Accept Request (Then could message),
+- Posting (For you, explore),
 
-Posting (For you, explore),
+- Suggestions,
 
-Suggestions,
+- Name: UTRGV Campus Connect,
 
-Name: UTRGV Campus Connect,
+- Customazible Profile, 
 
-Customazible Profile, 
+- Add/Remove feature,
 
-Add/Remove feature,
+- Likes/comments/repost/send a post,
 
-Likes/comments/repost/send a post,
+- Profile (followers, following, posts),
 
-Profile (followers, following, posts),
+- Temporary Posts,
 
-Temporary Posts,
-
-Close Friends Posts
+- Close Friends Posts
 
 
 Sprints:
 
-1st sprint: Database, Libraries. Configure Firebase, and ui,
+- 1st sprint: Database, Libraries. Configure Firebase, and ui,
 
-2nd sprint:Creating account (require email/phone #), login/logout, and auto login,
+- 2nd sprint:Creating account (require email/phone #), login/logout, and auto login,
 
-3rd sprint: facial recognition, 
+- 3rd sprint: facial recognition, 
 
-4th sprint: homepage, search, profile, and profile editing,
+- 4th sprint: homepage, search, profile, and profile editing,
 
-5th sprint: suggestions, adding/removing, user search, and followers/following,
+- 5th sprint: suggestions, adding/removing, user search, and followers/following,
 
-6th sprint: post, like, comment, and notifications,
+- 6th sprint: post, like, comment, and notifications,
 
-7th sprint: temporary post and close friends post,
+- 7th sprint: temporary post and close friends post,
 
-8th sprint: explore and for you page
+- 8th sprint: explore and for you page
