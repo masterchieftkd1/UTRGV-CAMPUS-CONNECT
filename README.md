@@ -1,5 +1,7 @@
 # SE_final_project
 
+Group: Sean Sanchez and Matias Rodriguez Jr
+
 What is the project going to be about?
 A UTRGV based social media app where people can find others with similar interests
 
