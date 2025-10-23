@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "755618363315",
+    "project_id": "utrgv-campus-connect",
+    "storage_bucket": "utrgv-campus-connect.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:755618363315:android:47677961644745a721fdc6",
+        "android_client_info": {
+          "package_name": "com.example.utrgv_campus_connect"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAwttjvg85wA7gRuyym0Xxs6H1lkKvwpEM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
