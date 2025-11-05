@@ -1,16 +1,25 @@
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
 
-class AuthScreen extends StatefulWidget {
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
   @override
-  _AuthScreenState createState() => _AuthScreenState();
+  State<LoginPage> createState() => _LoginPageState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _LoginPageState extends State<LoginPage> {
+  final _authService = AuthService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLogin = true;
-  final _authService = AuthService();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

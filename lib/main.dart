@@ -67,6 +67,6 @@ class _LoadingScreenState extends State<LoadingScreen> {
     }
 
     // 👇 Once ready, show AuthScreen
-    return AuthScreen();
+    return LoginPage();
   }
 }
