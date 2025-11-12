@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'auth_service.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class AuthScreen extends StatefulWidget {
+  const AuthScreen({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _AuthScreenState extends State<AuthScreen> {
   final _authService = AuthService();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -88,6 +88,14 @@ class _LoginPageState extends State<LoginPage> {
                     return;
                   }
 
+                  // ✅ Restrict domain
+                  if (!email.endsWith('@utrgv.edu')) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Only @utrgv.edu emails are allowed.")),
+                    );
+                    return;
+                  }
+
                   try {
                     if (_isLogin) {
                       await _authService.signIn(email, password);
@@ -100,6 +108,9 @@ class _LoginPageState extends State<LoginPage> {
                         const SnackBar(content: Text("Account created 🎉")),
                       );
                     }
+
+                    // ✅ Redirect after successful login/register
+                    Navigator.pushReplacementNamed(context, '/home');
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Error: $e")),
@@ -114,7 +125,7 @@ class _LoginPageState extends State<LoginPage> {
 
               const SizedBox(height: 10),
 
-              // Toggle text
+              // Toggle Login/Register
               TextButton(
                 onPressed: () {
                   setState(() {
