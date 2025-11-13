@@ -91,8 +91,10 @@ class _HomePageState extends State<HomePage> {
 
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.orange,
-        onPressed: () {
-          FirebaseAuth.instance.signOut();
+        onPressed: () async {
+          await FirebaseAuth.instance.signOut();
+          if (!context.mounted) return;
+          Navigator.pushReplacementNamed(context, '/login');   // ✅ FIXED
         },
         child: const Icon(Icons.logout),
       ),
