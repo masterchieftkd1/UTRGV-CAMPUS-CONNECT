@@ -1,0 +1,37 @@
+ INFO  Accepting connections at http://localhost:44231
+ HTTP  11/14/2025 12:13:12 AM ::1 GET /favicon.ico
+ HTTP  11/14/2025 12:13:12 AM ::1 Returned 200 in 14 ms
+ HTTP  11/14/2025 12:13:13 AM ::1 GET /
+ HTTP  11/14/2025 12:13:13 AM ::1 Returned 200 in 1 ms
+ HTTP  11/14/2025 12:13:14 AM ::1 GET /flutter_bootstrap.js
+ HTTP  11/14/2025 12:13:14 AM ::1 Returned 200 in 2 ms
+ HTTP  11/14/2025 12:13:14 AM ::1 GET /manifest.json
+ HTTP  11/14/2025 12:13:14 AM ::1 Returned 200 in 3 ms
+ HTTP  11/14/2025 12:13:14 AM ::1 GET /flutter_service_worker.js?v=1073348692
+ HTTP  11/14/2025 12:13:14 AM ::1 Returned 200 in 2 ms
+ HTTP  11/14/2025 12:13:14 AM ::1 GET /favicon.png
+ HTTP  11/14/2025 12:13:14 AM ::1 Returned 200 in 1 ms
+ HTTP  11/14/2025 12:13:14 AM ::1 GET /icons/Icon-192.png
+ HTTP  11/14/2025 12:13:14 AM ::1 Returned 200 in 2 ms
+ HTTP  11/14/2025 12:13:14 AM ::1 GET /main.dart.js
+ HTTP  11/14/2025 12:13:14 AM ::1 GET /index.html
+ HTTP  11/14/2025 12:13:14 AM ::1 Returned 301 in 1 ms
+ HTTP  11/14/2025 12:13:14 AM ::1 Returned 200 in 11 ms
+ HTTP  11/14/2025 12:13:14 AM ::1 GET /flutter_bootstrap.js
+ HTTP  11/14/2025 12:13:14 AM ::1 Returned 200 in 3 ms
+ HTTP  11/14/2025 12:13:14 AM ::1 GET /index
+ HTTP  11/14/2025 12:13:14 AM ::1 Returned 301 in 1 ms
+ HTTP  11/14/2025 12:13:14 AM ::1 GET /assets/AssetManifest.bin.json
+ HTTP  11/14/2025 12:13:14 AM ::1 Returned 200 in 1 ms
+ HTTP  11/14/2025 12:13:14 AM ::1 GET /
+ HTTP  11/14/2025 12:13:14 AM ::1 Returned 200 in 1 ms
+ HTTP  11/14/2025 12:13:14 AM ::1 GET /assets/FontManifest.json
+ HTTP  11/14/2025 12:13:14 AM ::1 Returned 200 in 1 ms
+ HTTP  11/14/2025 12:13:15 AM ::1 GET /assets/fonts/MaterialIcons-Regular.otf
+ HTTP  11/14/2025 12:13:15 AM ::1 Returned 200 in 3 ms
+ HTTP  11/14/2025 12:13:15 AM ::1 GET /assets/packages/cupertino_icons/assets/CupertinoIcons.ttf
+ HTTP  11/14/2025 12:13:15 AM ::1 Returned 200 in 2 ms
+ HTTP  11/14/2025 12:13:15 AM ::1 GET /assets/packages/fluttertoast/assets/toastify.css
+ HTTP  11/14/2025 12:13:15 AM ::1 Returned 200 in 1 ms
+ HTTP  11/14/2025 12:13:15 AM ::1 GET /assets/packages/fluttertoast/assets/toastify.js
+ HTTP  11/14/2025 12:13:15 AM ::1 Returned 200 in 1 ms
