@@ -29,7 +29,7 @@ class _HomePageState extends State<HomePage> {
             },
           ),
 
-          // ⭐ Logout Button
+          // ⭐ KEEP ONLY THIS LOGOUT BUTTON
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: "Logout",
@@ -106,16 +106,6 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-      ),
-
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.orange,
-        onPressed: () async {
-          await FirebaseAuth.instance.signOut();
-          if (!mounted) return;
-          Navigator.pushReplacementNamed(context, '/login');
-        },
-        child: const Icon(Icons.logout),
       ),
     );
   }
