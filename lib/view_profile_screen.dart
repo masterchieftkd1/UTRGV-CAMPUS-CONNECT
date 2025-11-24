@@ -6,7 +6,6 @@ import 'chat_screen.dart';
 
 class ViewProfileScreen extends StatefulWidget {
   final String userId;
-
   const ViewProfileScreen({super.key, required this.userId});
 
   @override
@@ -14,200 +13,216 @@ class ViewProfileScreen extends StatefulWidget {
 }
 
 class _ViewProfileScreenState extends State<ViewProfileScreen> {
-  late Future<Map<String, DocumentSnapshot>> _futureData;
+  late Future<Map<String, DocumentSnapshot>> _profileFuture;
   bool _isActionLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _futureData = _loadProfile();
+    _profileFuture = _loadProfileData();
   }
 
-  Future<Map<String, DocumentSnapshot>> _loadProfile() async {
-    final fs = FirebaseFirestore.instance;
+  Future<Map<String, DocumentSnapshot>> _loadProfileData() async {
     final currentUid = FirebaseAuth.instance.currentUser!.uid;
+    final fs = FirebaseFirestore.instance;
 
-    final target = await fs.collection("users").doc(widget.userId).get();
-    final current = await fs.collection("users").doc(currentUid).get();
+    final targetDoc = await fs.collection('users').doc(widget.userId).get();
+    final currentDoc = await fs.collection('users').doc(currentUid).get();
 
     return {
-      "target": target,
-      "current": current,
+      'target': targetDoc,
+      'current': currentDoc,
     };
   }
 
   Future<void> _refresh() async {
     setState(() {
-      _futureData = _loadProfile();
+      _profileFuture = _loadProfileData();
     });
   }
 
-  // ============================================================
-  // FRIEND SYSTEM (SAFE BATCH OPERATIONS)
-  // ============================================================
-
-  Future<void> _sendRequest(String currentUid) async {
-    await _performAction(() async {
-      final fs = FirebaseFirestore.instance;
-
-      final batch = fs.batch();
-      final me = fs.collection("users").doc(currentUid);
-      final them = fs.collection("users").doc(widget.userId);
-
-      batch.update(me, {
-        "outgoingRequests": FieldValue.arrayUnion([widget.userId]),
-      });
-      batch.update(them, {
-        "incomingRequests": FieldValue.arrayUnion([currentUid]),
-      });
-
-      await batch.commit();
-    });
-  }
-
-  Future<void> _cancelRequest(String currentUid) async {
-    await _performAction(() async {
-      final fs = FirebaseFirestore.instance;
-
-      final batch = fs.batch();
-      final me = fs.collection("users").doc(currentUid);
-      final them = fs.collection("users").doc(widget.userId);
-
-      batch.update(me, {
-        "outgoingRequests": FieldValue.arrayRemove([widget.userId]),
-      });
-      batch.update(them, {
-        "incomingRequests": FieldValue.arrayRemove([currentUid]),
-      });
-
-      await batch.commit();
-    });
-  }
-
-  Future<void> _acceptRequest(String currentUid) async {
-    await _performAction(() async {
-      final fs = FirebaseFirestore.instance;
-
-      final batch = fs.batch();
-      final me = fs.collection("users").doc(currentUid);
-      final them = fs.collection("users").doc(widget.userId);
-
-      batch.update(me, {
-        "incomingRequests": FieldValue.arrayRemove([widget.userId]),
-        "friends": FieldValue.arrayUnion([widget.userId]),
-      });
-
-      batch.update(them, {
-        "outgoingRequests": FieldValue.arrayRemove([currentUid]),
-        "friends": FieldValue.arrayUnion([currentUid]),
-      });
-
-      await batch.commit();
-    });
-  }
-
-  Future<void> _declineRequest(String currentUid) async {
-    await _performAction(() async {
-      final fs = FirebaseFirestore.instance;
-
-      final batch = fs.batch();
-      final me = fs.collection("users").doc(currentUid);
-      final them = fs.collection("users").doc(widget.userId);
-
-      batch.update(me, {
-        "incomingRequests": FieldValue.arrayRemove([widget.userId]),
-      });
-
-      batch.update(them, {
-        "outgoingRequests": FieldValue.arrayRemove([currentUid]),
-      });
-
-      await batch.commit();
-    });
-  }
-
-  Future<void> _removeFriend(String currentUid) async {
-    await _performAction(() async {
-      final fs = FirebaseFirestore.instance;
-
-      final batch = fs.batch();
-      final me = fs.collection("users").doc(currentUid);
-      final them = fs.collection("users").doc(widget.userId);
-
-      batch.update(me, {
-        "friends": FieldValue.arrayRemove([widget.userId]),
-      });
-      batch.update(them, {
-        "friends": FieldValue.arrayRemove([currentUid]),
-      });
-
-      await batch.commit();
-    });
-  }
-
-  // Generic action wrapper
-  Future<void> _performAction(Future<void> Function() action) async {
+  Future<void> _sendFriendRequest(String currentUid) async {
     setState(() => _isActionLoading = true);
-    await action();
+    final fs = FirebaseFirestore.instance;
+
+    final batch = fs.batch();
+    final currentRef = fs.collection('users').doc(currentUid);
+    final targetRef = fs.collection('users').doc(widget.userId);
+
+    // You send request → outgoingRequests, they receive → incomingRequests
+    batch.update(currentRef, {
+      'outgoingRequests': FieldValue.arrayUnion([widget.userId]),
+    });
+    batch.update(targetRef, {
+      'incomingRequests': FieldValue.arrayUnion([currentUid]),
+    });
+
+    await batch.commit();
     setState(() => _isActionLoading = false);
     _refresh();
   }
 
-  // ============================================================
-  // UI
-  // ============================================================
+  Future<void> _cancelFriendRequest(String currentUid) async {
+    setState(() => _isActionLoading = true);
+    final fs = FirebaseFirestore.instance;
+
+    final batch = fs.batch();
+    final currentRef = fs.collection('users').doc(currentUid);
+    final targetRef = fs.collection('users').doc(widget.userId);
+
+    batch.update(currentRef, {
+      'outgoingRequests': FieldValue.arrayRemove([widget.userId]),
+    });
+    batch.update(targetRef, {
+      'incomingRequests': FieldValue.arrayRemove([currentUid]),
+    });
+
+    await batch.commit();
+    setState(() => _isActionLoading = false);
+    _refresh();
+  }
+
+  Future<void> _acceptFriendRequest(String currentUid) async {
+    setState(() => _isActionLoading = true);
+    final fs = FirebaseFirestore.instance;
+
+    final batch = fs.batch();
+    final currentRef = fs.collection('users').doc(currentUid);
+    final targetRef = fs.collection('users').doc(widget.userId);
+
+    // Move from request → friend for both sides
+    batch.update(currentRef, {
+      'incomingRequests': FieldValue.arrayRemove([widget.userId]),
+      'friends': FieldValue.arrayUnion([widget.userId]),
+    });
+    batch.update(targetRef, {
+      'outgoingRequests': FieldValue.arrayRemove([currentUid]),
+      'friends': FieldValue.arrayUnion([currentUid]),
+    });
+
+    await batch.commit();
+    setState(() => _isActionLoading = false);
+    _refresh();
+  }
+
+  Future<void> _declineFriendRequest(String currentUid) async {
+    setState(() => _isActionLoading = true);
+    final fs = FirebaseFirestore.instance;
+
+    final batch = fs.batch();
+    final currentRef = fs.collection('users').doc(currentUid);
+    final targetRef = fs.collection('users').doc(widget.userId);
+
+    batch.update(currentRef, {
+      'incomingRequests': FieldValue.arrayRemove([widget.userId]),
+    });
+    batch.update(targetRef, {
+      'outgoingRequests': FieldValue.arrayRemove([currentUid]),
+    });
+
+    await batch.commit();
+    setState(() => _isActionLoading = false);
+    _refresh();
+  }
+
+  Future<void> _removeFriend(String currentUid) async {
+    setState(() => _isActionLoading = true);
+    final fs = FirebaseFirestore.instance;
+
+    final batch = fs.batch();
+    final currentRef = fs.collection('users').doc(currentUid);
+    final targetRef = fs.collection('users').doc(widget.userId);
+
+    batch.update(currentRef, {
+      'friends': FieldValue.arrayRemove([widget.userId]),
+    });
+    batch.update(targetRef, {
+      'friends': FieldValue.arrayRemove([currentUid]),
+    });
+
+    await batch.commit();
+    setState(() => _isActionLoading = false);
+    _refresh();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser!.uid;
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentUid = currentUser?.uid;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("User Profile"),
         backgroundColor: Colors.orange,
       ),
-
       body: FutureBuilder<Map<String, DocumentSnapshot>>(
-        future: _futureData,
-        builder: (context, snap) {
-          if (!snap.hasData) {
+        future: _profileFuture,
+        builder: (_, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final targetDoc = snap.data!["target"]!;
-          final currentDoc = snap.data!["current"]!;
+          if (!snapshot.hasData) {
+            return const Center(child: Text("User not found."));
+          }
+
+          final targetDoc = snapshot.data!['target']!;
+          final currentDoc = snapshot.data!['current']!;
 
           if (!targetDoc.exists) {
             return const Center(child: Text("User not found."));
           }
 
-          final target = targetDoc.data() as Map<String, dynamic>? ?? {};
-          final current = currentDoc.data() as Map<String, dynamic>? ?? {};
+          final targetData =
+              targetDoc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
+          final currentData =
+              currentDoc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
 
-          final email = target["email"] ?? "No Email";
-          final bio = target["bio"] ?? "No bio available";
-          final actualUid = target["uid"] ?? targetDoc.id;
+          final email = targetData['email'] ?? 'No Email';
+          final bio = targetData['bio'] ?? 'No bio available.';
+          final actualUid = targetData['uid'] ?? targetDoc.id;
 
-          final friends =
-              List<String>.from(current["friends"] ?? []);
-          final incoming =
-              List<String>.from(current["incomingRequests"] ?? []);
-          final outgoing =
-              List<String>.from(current["outgoingRequests"] ?? []);
+          // Relationship arrays
+          final List<String> myFriends =
+              List<String>.from(currentData['friends'] ?? []);
+          final List<String> myIncoming =
+              List<String>.from(currentData['incomingRequests'] ?? []);
+          final List<String> myOutgoing =
+              List<String>.from(currentData['outgoingRequests'] ?? []);
+
+          // Target user's relationship data – for counts on THEIR profile
+          final List<String> targetFriends =
+              List<String>.from(targetData['friends'] ?? []);
+          final List<String> targetIncoming =
+              List<String>.from(targetData['incomingRequests'] ?? []);
+          final List<String> targetOutgoing =
+              List<String>.from(targetData['outgoingRequests'] ?? []);
+
+          // Counts for target user
+          final Set<String> targetFriendsSet =
+              targetFriends.map((e) => e.toString()).toSet();
+
+          final int targetFriendsCount = targetFriendsSet.length;
+          final int targetFollowersCount = targetIncoming
+              .map((e) => e.toString())
+              .where((id) => !targetFriendsSet.contains(id))
+              .length;
+          final int targetFollowingCount = targetOutgoing
+              .map((e) => e.toString())
+              .where((id) => !targetFriendsSet.contains(id))
+              .length;
 
           final bool isSelf = widget.userId == currentUid;
-          final bool isFriend = friends.contains(widget.userId);
-          final bool gotRequest = incoming.contains(widget.userId);
-          final bool sentRequest = outgoing.contains(widget.userId);
+          final bool isFriend = myFriends.contains(widget.userId);
+          final bool requestReceived = myIncoming.contains(widget.userId);
+          final bool requestSent = myOutgoing.contains(widget.userId);
 
-          // ---------------------------------------------------------------
-          // ACTION BUTTONS LOGIC
-          // ---------------------------------------------------------------
-          Widget action = const SizedBox.shrink();
+          Widget actionArea = const SizedBox.shrink();
 
-          if (!isSelf) {
+          if (!isSelf && currentUid != null) {
             if (isFriend) {
-              action = Column(
+              // Already friends
+              actionArea = Column(
                 children: [
                   ElevatedButton.icon(
                     onPressed: _isActionLoading
@@ -218,7 +233,7 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                               MaterialPageRoute(
                                 builder: (_) => ChatScreen(
                                   otherUserId: widget.userId,
-                                  otherUserEmail: email,
+                                  otherUserEmail: email.toString(),
                                 ),
                               ),
                             );
@@ -226,7 +241,9 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                     icon: const Icon(Icons.message),
                     label: const Text("Message"),
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange),
+                      backgroundColor: Colors.orange,
+                      minimumSize: const Size(double.infinity, 45),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   ElevatedButton.icon(
@@ -236,66 +253,77 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                     icon: const Icon(Icons.person_remove),
                     label: const Text("Remove Friend"),
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red),
+                      backgroundColor: Colors.red,
+                      minimumSize: const Size(double.infinity, 45),
+                    ),
                   ),
                 ],
               );
-            } else if (gotRequest) {
-              action = Column(
+            } else if (requestReceived) {
+              // They requested you
+              actionArea = Column(
                 children: [
                   ElevatedButton.icon(
                     onPressed: _isActionLoading
                         ? null
-                        : () => _acceptRequest(currentUid),
+                        : () => _acceptFriendRequest(currentUid),
                     icon: const Icon(Icons.check),
-                    label: const Text("Accept Request"),
+                    label: const Text("Accept Friend Request"),
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green),
+                      backgroundColor: Colors.green,
+                      minimumSize: const Size(double.infinity, 45),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   ElevatedButton.icon(
                     onPressed: _isActionLoading
                         ? null
-                        : () => _declineRequest(currentUid),
+                        : () => _declineFriendRequest(currentUid),
                     icon: const Icon(Icons.close),
                     label: const Text("Decline"),
                     style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey),
+                      backgroundColor: Colors.grey,
+                      minimumSize: const Size(double.infinity, 45),
+                    ),
                   ),
                 ],
               );
-            } else if (sentRequest) {
-              action = ElevatedButton.icon(
+            } else if (requestSent) {
+              // You requested them
+              actionArea = ElevatedButton.icon(
                 onPressed: _isActionLoading
                     ? null
-                    : () => _cancelRequest(currentUid),
+                    : () => _cancelFriendRequest(currentUid),
                 icon: const Icon(Icons.hourglass_top),
-                label: const Text("Cancel Request"),
+                label: const Text("Cancel Friend Request"),
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueGrey),
+                  backgroundColor: Colors.blueGrey,
+                  minimumSize: const Size(double.infinity, 45),
+                ),
               );
             } else {
-              action = ElevatedButton.icon(
+              // No relation yet → send friend request (and logically you're "following" them now)
+              actionArea = ElevatedButton.icon(
                 onPressed: _isActionLoading
                     ? null
-                    : () => _sendRequest(currentUid),
+                    : () => _sendFriendRequest(currentUid),
                 icon: const Icon(Icons.person_add),
                 label: const Text("Add Friend"),
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange),
+                  backgroundColor: Colors.orange,
+                  minimumSize: const Size(double.infinity, 45),
+                ),
               );
             }
           }
 
-          // ---------------------------------------------------------------
-          // UI LAYOUT
-          // ---------------------------------------------------------------
           return RefreshIndicator(
             onRefresh: _refresh,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(20),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   CircleAvatar(
                     radius: 60,
@@ -307,20 +335,34 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-
                   Text(
-                    email,
+                    email.toString(),
                     style: const TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.bold),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 10),
-
                   Text(
                     "User ID:\n$actualUid",
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                        fontSize: 14, color: Colors.black54),
+                      fontSize: 14,
+                      color: Colors.black54,
+                    ),
                   ),
+                  const SizedBox(height: 20),
+
+                  // 🔥 Friends / Following / Followers row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _statItem("Friends", targetFriendsCount),
+                      _statItem("Following", targetFollowingCount),
+                      _statItem("Followers", targetFollowersCount),
+                    ],
+                  ),
+
                   const SizedBox(height: 25),
 
                   Container(
@@ -331,11 +373,10 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      bio,
+                      bio.toString(),
                       style: const TextStyle(fontSize: 16),
                     ),
                   ),
-
                   const SizedBox(height: 30),
 
                   if (isSelf)
@@ -343,14 +384,35 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                       "This is your own profile.",
                       style: TextStyle(color: Colors.grey),
                     ),
-
-                  if (!isSelf) action,
+                  if (!isSelf) actionArea,
                 ],
               ),
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _statItem(String label, int count) {
+    return Column(
+      children: [
+        Text(
+          count.toString(),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.black54,
+          ),
+        ),
+      ],
     );
   }
 }
