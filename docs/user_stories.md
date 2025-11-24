@@ -10,11 +10,6 @@
 **I want** to customize and create my profile with my interests and hobbies
 **So that** I can network with others who are like me
 
-## Facial Recognition Login
-**As a** returning user
-**I want** to login using facial recognition
-**So that** I can access my account quickly and securely without having to type in anything
-
 ## Posting and Engagement
 **As a** user
 **I want** to create posts and interact with others posts
@@ -39,16 +34,6 @@
 **As a** UTRGV student
 **I want** to sign up using my UTRGV email
 **So that** only students that verified their account can use the platform
-
-## Email & Phone Verification
-**As a** new user
-**I want** to verify my email and number through codes that are sent through sms
-**So that** my account is secure
-
-## Auto Login
-**As a** frequent user
-**I want** to stay logged in automatically
-**So that** I don't have to enter my credentials every time I open the app
 
 ## Homepage Feed
 **As a** user
@@ -89,16 +74,6 @@
 **As a** user
 **I want** to receive push notifications when someone interacts with anything on my profile 
 **So that** I can stay updated on the app without having to constantly go on it
-
-## Temporary Posts (Stories)
-**As a** user
-**I want** to post temporary content that doesn't appear anymore after 24 hours
-**So that** I can just share the moments briefly without them being permanently there on my profile
-
-## Close Friends Posts
-**As a** user
-**I want** to share posts only with my close friends
-**So that** I can control who sees my personal updates
 
 ## Explore Page
 **As a** user
