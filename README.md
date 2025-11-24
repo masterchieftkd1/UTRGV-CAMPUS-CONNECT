@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # utrgv_campus_connect
 
 A new Flutter project for students to easily network
@@ -15,12 +15,11 @@ A UTRGV based social media app where people can find others with similar interes
 What languages would we use?
 Flutter (Dart. runs for ios, android, web, etc),
 Firebase,
+Javascript,
 Java/Python/C++
 
 
 Features:
-- Facial Recognition,
-
 - Account Creation,
 
 - Log in/log out,
@@ -28,8 +27,6 @@ Features:
 - Database,
 
 - Require utrgv email,
-
-- Require phone verification,
 
 - Email verification,
 
@@ -51,26 +48,17 @@ Features:
 
 - Profile (followers, following, posts),
 
-- Temporary Posts,
-
-- Close Friends Posts
-
 
 Sprints:
 
-- 1st sprint: Database, Libraries. Configure Firebase, and ui,
+- 1st sprint: Database, Libraries. Configure Firebase, and ui
 
-- 2nd sprint:Creating account (require email/phone #), login/logout, and auto login,
+- 2nd sprint: Creating account (require email/phone #) and login/logout
 
-- 3rd sprint: facial recognition, 
+- 3rd sprint: homepage, search, profile, and profile editing
 
-- 4th sprint: homepage, search, profile, and profile editing,
+- 4th sprint: suggestions, adding/removing, user search, and followers/following
 
-- 5th sprint: suggestions, adding/removing, user search, and followers/following,
+- 5th sprint: post, like, comment, and notifications
 
-- 6th sprint: post, like, comment, and notifications,
-
-- 7th sprint: temporary post and close friends post,
-
-- 8th sprint: explore and for you page
->>>>>>> fecc6140fe4eae9061b24eb78d6b79c7aee219eb
+- 6th sprint: explore and for you
