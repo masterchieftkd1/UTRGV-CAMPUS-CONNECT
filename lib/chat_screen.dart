@@ -25,7 +25,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   String get _currentUid => _auth.currentUser!.uid;
 
-  /// Generates a stable chat ID for the two users
+  /// Stable chat ID
   String get _chatId {
     final ids = [_currentUid, widget.otherUserId]..sort();
     return "${ids[0]}_${ids[1]}";
@@ -34,7 +34,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    _createChatRoomIfMissing();
+    _ensureChatRoomExists();
     _markChatSeen();
   }
 
@@ -47,34 +47,58 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // -------------------------------------------------------------
-  //    CHAT ROOM CREATION
+  // FIXED — Ensures chat room exists AND has valid structure
   // -------------------------------------------------------------
-  Future<void> _createChatRoomIfMissing() async {
-    final roomRef =
-        FirebaseFirestore.instance.collection("chatRooms").doc(_chatId);
+  Future<void> _ensureChatRoomExists() async {
+    final fs = FirebaseFirestore.instance;
+    final roomRef = fs.collection("chatRooms").doc(_chatId);
 
-    final roomSnap = await roomRef.get();
-    if (!roomSnap.exists) {
+    final snap = await roomRef.get();
+
+    if (!snap.exists) {
       await roomRef.set({
         "participants": [_currentUid, widget.otherUserId],
         "lastMessage": "",
         "lastMessageFrom": "",
         "lastMessageTime": FieldValue.serverTimestamp(),
         "seenBy": [],
-        "typing": {},
+        "typing": {
+          _currentUid: false,
+          widget.otherUserId: false,
+        },
       });
+    } else {
+      // Fix broken rooms automatically (self-healing)
+      final data = snap.data() ?? {};
+
+      if (!data.containsKey("participants")) {
+        await roomRef.set({
+          "participants": [_currentUid, widget.otherUserId],
+        }, SetOptions(merge: true));
+      }
+
+      if (!data.containsKey("typing")) {
+        await roomRef.set({
+          "typing": {
+            _currentUid: false,
+            widget.otherUserId: false,
+          }
+        }, SetOptions(merge: true));
+      }
     }
   }
 
   // -------------------------------------------------------------
-  //    TYPING INDICATOR
+  // TYPING INDICATOR
   // -------------------------------------------------------------
   Future<void> _setTyping(bool value) async {
     final roomRef =
         FirebaseFirestore.instance.collection("chatRooms").doc(_chatId);
 
     await roomRef.set({
-      "typing": {_currentUid: value},
+      "typing": {
+        _currentUid: value,
+      }
     }, SetOptions(merge: true));
   }
 
@@ -82,7 +106,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final empty = value.trim().isEmpty;
 
     _typingTimer?.cancel();
-
     _setTyping(!empty);
 
     if (!empty) {
@@ -93,7 +116,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // -------------------------------------------------------------
-  //    SEND MESSAGE
+  // SEND MESSAGE
   // -------------------------------------------------------------
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
@@ -106,15 +129,13 @@ class _ChatScreenState extends State<ChatScreen> {
     final fs = FirebaseFirestore.instance;
     final roomRef = fs.collection("chatRooms").doc(_chatId);
 
-    final msgRef =
-        await roomRef.collection("messages").add({
+    final msgRef = await roomRef.collection("messages").add({
       "fromId": _currentUid,
       "toId": widget.otherUserId,
       "text": text,
       "timestamp": FieldValue.serverTimestamp(),
     });
 
-    // Update the chatRoom with last message info
     await roomRef.set({
       "lastMessage": text,
       "lastMessageId": msgRef.id,
@@ -125,7 +146,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // -------------------------------------------------------------
-  //    MARK CHAT AS SEEN
+  // MARK AS SEEN
   // -------------------------------------------------------------
   Future<void> _markChatSeen() async {
     final roomRef =
@@ -137,7 +158,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // -------------------------------------------------------------
-  //    BUILD UI
+  // UI
   // -------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
@@ -152,9 +173,7 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
 
-          // ==============================================================
-          //             TYPING INDICATOR + SEEN/DELIVERED
-          // ==============================================================
+          // Typing / Seen Indicator
           StreamBuilder<DocumentSnapshot>(
             stream: FirebaseFirestore.instance
                 .collection("chatRooms")
@@ -165,22 +184,18 @@ class _ChatScreenState extends State<ChatScreen> {
 
               if (roomSnap.hasData && roomSnap.data!.exists) {
                 final data =
-                    roomSnap.data!.data() as Map<String, dynamic>? ??
-                        {};
+                    roomSnap.data!.data() as Map<String, dynamic>? ?? {};
 
-                // TYPING
-                final typing =
-                    (data["typing"] ?? {}) as Map<String, dynamic>;
+                // typing
+                final typing = (data["typing"] ?? {}) as Map<String, dynamic>;
                 final otherTyping = typing[widget.otherUserId] == true;
 
                 if (otherTyping) {
                   info = "Typing...";
                 } else {
-                  // SEEN / DELIVERED
                   final lastFrom = data["lastMessageFrom"] ?? "";
-                  final seenBy = (data["seenBy"] as List<dynamic>? ?? [])
-                      .map((e) => e.toString())
-                      .toList();
+                  final seenBy =
+                      ((data["seenBy"] as List?) ?? []).cast<String>();
 
                   if (lastFrom == currentUid) {
                     info = seenBy.contains(widget.otherUserId)
@@ -193,8 +208,8 @@ class _ChatScreenState extends State<ChatScreen> {
               return info.isEmpty
                   ? const SizedBox(height: 22)
                   : Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 2),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -209,9 +224,7 @@ class _ChatScreenState extends State<ChatScreen> {
             },
           ),
 
-          // ==============================================================
-          //                         MESSAGES LIST
-          // ==============================================================
+          // Messages list
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -220,16 +233,13 @@ class _ChatScreenState extends State<ChatScreen> {
                   .collection("messages")
                   .orderBy("timestamp")
                   .snapshots(),
-
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-                  return const Center(
-                      child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 final docs = snapshot.data!.docs;
 
-                // Mark chat seen whenever messages update
                 _markChatSeen();
 
                 if (docs.isEmpty) {
@@ -241,17 +251,15 @@ class _ChatScreenState extends State<ChatScreen> {
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
                     final msg =
-                        docs[index].data() as Map<String, dynamic>? ??
-                            {};
+                        docs[index].data() as Map<String, dynamic>? ?? {};
 
                     final fromId = msg["fromId"] ?? "";
                     final text = msg["text"] ?? "";
                     final isMe = fromId == currentUid;
 
                     return Align(
-                      alignment: isMe
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
+                      alignment:
+                          isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
                         margin: const EdgeInsets.symmetric(
                             vertical: 4, horizontal: 8),
@@ -263,10 +271,8 @@ class _ChatScreenState extends State<ChatScreen> {
                               : Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Text(
-                          text,
-                          style: const TextStyle(fontSize: 15),
-                        ),
+                        child: Text(text,
+                            style: const TextStyle(fontSize: 15)),
                       ),
                     );
                   },
@@ -275,13 +281,11 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
 
-          // ==============================================================
-          //                         INPUT BAR
-          // ==============================================================
+          // Input bar
           SafeArea(
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 8, vertical: 6),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: Row(
                 children: [
                   Expanded(

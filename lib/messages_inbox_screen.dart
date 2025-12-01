@@ -9,19 +9,22 @@ class MessagesInboxScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser!.uid;
+    final String currentUid = FirebaseAuth.instance.currentUser!.uid;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Messages'),
+        title: const Text("Messages"),
         backgroundColor: Colors.orange,
       ),
 
+      // ----------------------------------------------------------------------
+      //   STREAM CHAT ROOMS WHERE THIS USER IS A PARTICIPANT
+      // ----------------------------------------------------------------------
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
-            .collection('chatRooms')
-            .where('participants', arrayContains: currentUid)
-            .orderBy('lastMessageTime', descending: true)
+            .collection("chatRooms")
+            .where("participants", arrayContains: currentUid)
+            .orderBy("lastMessageTime", descending: true)
             .snapshots(),
 
         builder: (context, snapshot) {
@@ -32,30 +35,38 @@ class MessagesInboxScreen extends StatelessWidget {
           final rooms = snapshot.data!.docs;
 
           if (rooms.isEmpty) {
-            return const Center(child: Text("No messages yet."));
+            return const Center(child: Text("No conversations yet."));
           }
 
           return ListView.builder(
             itemCount: rooms.length,
             itemBuilder: (context, index) {
-              final data = rooms[index].data() as Map<String, dynamic>? ?? {};
+              final room = rooms[index];
+              final data =
+                  room.data() as Map<String, dynamic>? ?? {};
 
-              // Fallback safety
-              final List participants = (data["participants"] ?? []);
+              // ------------------------------------------------------------------
+              // SAFETY: Ensure participants exist
+              // ------------------------------------------------------------------
+              final List participants =
+                  (data["participants"] ?? []) as List;
 
-              // Determine the other user
-              final String otherId = participants
-                  .firstWhere((id) => id != currentUid)
-                  .toString();
+              if (participants.length < 2) {
+                return const SizedBox.shrink();
+              }
 
-              final String lastMsg = data["lastMessage"]?.toString() ?? "";
-              final String lastFrom = data["lastMessageFrom"]?.toString() ?? "";
+              final otherId =
+                  participants.firstWhere((id) => id != currentUid);
 
-              // Format preview
-              final preview = lastFrom == currentUid
-                  ? "You: $lastMsg"
-                  : lastMsg;
+              final lastMsg = (data["lastMessage"] ?? "") as String;
+              final lastFrom = (data["lastMessageFrom"] ?? "") as String;
 
+              final preview =
+                  lastFrom == currentUid ? "You: $lastMsg" : lastMsg;
+
+              // ------------------------------------------------------------------
+              //   LOAD OTHER USER DATA
+              // ------------------------------------------------------------------
               return FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance
                     .collection("users")
@@ -72,11 +83,15 @@ class MessagesInboxScreen extends StatelessWidget {
                   final userData =
                       userSnap.data!.data() as Map<String, dynamic>? ?? {};
 
-                  final email = userData["email"]?.toString() ?? "Unknown User";
+                  final String email =
+                      userData["email"]?.toString() ?? "Unknown User";
 
                   return ListTile(
-                    leading: const Icon(Icons.person, color: Colors.orange),
+                    leading:
+                        const Icon(Icons.person, color: Colors.orange),
+
                     title: Text(email),
+
                     subtitle: Text(
                       preview.isEmpty ? "(No messages yet)" : preview,
                       maxLines: 1,
