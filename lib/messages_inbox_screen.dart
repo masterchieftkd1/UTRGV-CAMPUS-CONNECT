@@ -19,10 +19,9 @@ class MessagesInboxScreen extends StatelessWidget {
 
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
-            .collection("chatRooms")
-            .where("participants", arrayContains: currentUid)
-            .orderBy("lastMessageTime", descending: true)
-            .snapshots(),
+        .collection("chats")
+        .where("members", arrayContains: currentUid)
+        .snapshots(),
 
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -41,33 +40,24 @@ class MessagesInboxScreen extends StatelessWidget {
               final roomDoc = rooms[index];
               final data = roomDoc.data() as Map<String, dynamic>? ?? {};
 
-              // -----------------------------
-              // SAFETY: Get participants
-              // -----------------------------
-              final participantsRaw = (data["participants"] ?? []) as List;
-              final participants =
-                  participantsRaw.map((e) => e.toString()).toList();
+              final membersRaw = (data["members"] ?? []) as List;
+              final members =
+                  membersRaw.map((e) => e.toString()).toList();
 
-              if (participants.length < 2) {
+              if (members.length < 2) {
                 return const SizedBox.shrink();
               }
 
               final otherId =
-                  participants.firstWhere((id) => id != currentUid);
+                  members.firstWhere((id) => id != currentUid);
 
-              // -----------------------------
-              // Last message preview
-              // -----------------------------
               final lastMsg = data["lastMessage"]?.toString() ?? "";
-              final lastFrom = data["lastMessageFrom"]?.toString() ?? "";
+              final lastFrom = data["lastSender"]?.toString() ?? "";
 
               final preview = lastMsg.isEmpty
                   ? "(No messages yet)"
                   : (lastFrom == currentUid ? "You: $lastMsg" : lastMsg);
 
-              // -----------------------------
-              // GET OTHER USER DATA
-              // -----------------------------
               return FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance
                     .collection("users")
