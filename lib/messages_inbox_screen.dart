@@ -17,9 +17,6 @@ class MessagesInboxScreen extends StatelessWidget {
         backgroundColor: Colors.orange,
       ),
 
-      // ----------------------------------------------------------------------
-      //   STREAM CHAT ROOMS WHERE THIS USER IS A PARTICIPANT
-      // ----------------------------------------------------------------------
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection("chatRooms")
@@ -28,28 +25,28 @@ class MessagesInboxScreen extends StatelessWidget {
             .snapshots(),
 
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text("No conversations yet."));
           }
 
           final rooms = snapshot.data!.docs;
 
-          if (rooms.isEmpty) {
-            return const Center(child: Text("No conversations yet."));
-          }
-
           return ListView.builder(
             itemCount: rooms.length,
             itemBuilder: (context, index) {
-              final room = rooms[index];
-              final data =
-                  room.data() as Map<String, dynamic>? ?? {};
+              final roomDoc = rooms[index];
+              final data = roomDoc.data() as Map<String, dynamic>? ?? {};
 
-              // ------------------------------------------------------------------
-              // SAFETY: Ensure participants exist
-              // ------------------------------------------------------------------
-              final List participants =
-                  (data["participants"] ?? []) as List;
+              // -----------------------------
+              // SAFETY: Get participants
+              // -----------------------------
+              final participantsRaw = (data["participants"] ?? []) as List;
+              final participants =
+                  participantsRaw.map((e) => e.toString()).toList();
 
               if (participants.length < 2) {
                 return const SizedBox.shrink();
@@ -58,15 +55,19 @@ class MessagesInboxScreen extends StatelessWidget {
               final otherId =
                   participants.firstWhere((id) => id != currentUid);
 
-              final lastMsg = (data["lastMessage"] ?? "") as String;
-              final lastFrom = (data["lastMessageFrom"] ?? "") as String;
+              // -----------------------------
+              // Last message preview
+              // -----------------------------
+              final lastMsg = data["lastMessage"]?.toString() ?? "";
+              final lastFrom = data["lastMessageFrom"]?.toString() ?? "";
 
-              final preview =
-                  lastFrom == currentUid ? "You: $lastMsg" : lastMsg;
+              final preview = lastMsg.isEmpty
+                  ? "(No messages yet)"
+                  : (lastFrom == currentUid ? "You: $lastMsg" : lastMsg);
 
-              // ------------------------------------------------------------------
-              //   LOAD OTHER USER DATA
-              // ------------------------------------------------------------------
+              // -----------------------------
+              // GET OTHER USER DATA
+              // -----------------------------
               return FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance
                     .collection("users")
@@ -75,25 +76,24 @@ class MessagesInboxScreen extends StatelessWidget {
 
                 builder: (context, userSnap) {
                   if (!userSnap.hasData) {
-                    return const ListTile(
-                      title: Text("Loading user..."),
-                    );
+                    return const ListTile(title: Text("Loading user..."));
                   }
 
                   final userData =
                       userSnap.data!.data() as Map<String, dynamic>? ?? {};
 
-                  final String email =
+                  final email =
                       userData["email"]?.toString() ?? "Unknown User";
 
                   return ListTile(
-                    leading:
-                        const Icon(Icons.person, color: Colors.orange),
+                    leading: const CircleAvatar(
+                      child: Icon(Icons.person),
+                      backgroundColor: Colors.orange,
+                    ),
 
                     title: Text(email),
-
                     subtitle: Text(
-                      preview.isEmpty ? "(No messages yet)" : preview,
+                      preview,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

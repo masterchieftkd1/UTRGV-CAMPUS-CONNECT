@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+
+// Screens
 import 'auth_screen.dart';
 import 'home_page.dart';
 import 'profile_screen.dart';
 import 'view_profile_screen.dart';
 import 'friends_page.dart';
-import 'messages_page.dart';
+import 'messages_inbox_screen.dart';  // ✅ FIXED
 import 'chat_screen.dart';
 
 void main() async {
@@ -23,13 +25,17 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'UTRGV Campus Connect',
       debugShowCheckedModeBanner: false,
-      initialRoute: '/login',
+
+      // 🔥 FIX: User should not manually go to /login every time
+      home: const AuthScreen(),
+
       routes: {
-        '/login': (context) => const AuthScreen(),
         '/home': (context) => const HomePage(),
         '/profile': (context) => const ProfileScreen(),
         '/friends': (context) => const FriendsPage(),
-        '/messages': (context) => const MessagesPage(),
+
+        // 🔥 FIXED — Proper messages page
+        '/messages': (context) => const MessagesInboxScreen(),
       },
 
       // Routes that need arguments
@@ -43,12 +49,10 @@ class MyApp extends StatelessWidget {
 
         if (settings.name == '/chat') {
           final args = settings.arguments as Map<String, dynamic>;
-          final otherUserId = args['userId'] as String;
-          final otherEmail = args['email'] as String? ?? 'User';
           return MaterialPageRoute(
             builder: (_) => ChatScreen(
-              otherUserId: otherUserId,
-              otherUserEmail: otherEmail,
+              otherUserId: args['userId'],
+              otherUserEmail: args['email'] ?? 'User',
             ),
           );
         }

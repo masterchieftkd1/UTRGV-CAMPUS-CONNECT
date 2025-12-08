@@ -8,6 +8,7 @@ class MessagesPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
+
     if (currentUser == null) {
       return const Scaffold(
         body: Center(child: Text("Not logged in.")),
@@ -28,64 +29,50 @@ class MessagesPage extends StatelessWidget {
             .orderBy('lastMessageTime', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final rooms = snapshot.data!.docs;
-
-          if (rooms.isEmpty) {
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text("No conversations yet."));
           }
+
+          final rooms = snapshot.data!.docs;
 
           return ListView.builder(
             itemCount: rooms.length,
             itemBuilder: (context, index) {
               final room = rooms[index];
-              final data =
-                  room.data() as Map<String, dynamic>? ?? <String, dynamic>{};
+              final data = room.data() as Map<String, dynamic>? ?? {};
 
-              final List<dynamic> participants =
-                  data['participants'] ?? <dynamic>[];
-              if (participants.length != 2) {
-                return const SizedBox.shrink();
-              }
+              final participants = List<String>.from(data['participants'] ?? []);
+              if (participants.length != 2) return const SizedBox.shrink();
 
-              // Pick the other user's id
-              final otherUserId = participants
-                  .firstWhere((id) => id != currentUid)
-                  .toString();
+              final otherUserId =
+                  participants.firstWhere((id) => id != currentUid);
 
-              final lastMessage = data['lastMessage'] as String? ?? '';
-              final Timestamp? ts =
-                  data['lastMessageTime'] as Timestamp?;
-              final DateTime? time = ts?.toDate();
-
-              final lastFrom = data['lastMessageFrom'] as String? ?? '';
-              final List<dynamic> seenByDynamic =
-                  data['seenBy'] ?? <dynamic>[];
+              final lastMessage = data['lastMessage'] ?? '';
+              final ts = data['lastMessageTime'] as Timestamp?;
+              final lastFrom = data['lastMessageFrom'] ?? '';
               final seenBy =
-                  seenByDynamic.map((e) => e.toString()).toList();
+                  List<String>.from(data['seenBy'] ?? <String>[]);
 
-              final bool isLastFromMe = lastFrom == currentUid;
-              final bool hasSeenLast = seenBy.contains(currentUid);
+              final isLastFromMe = lastFrom == currentUid;
+              final hasSeenLast = seenBy.contains(currentUid);
 
-              String subtitle = lastMessage.isEmpty ? "No messages yet" : lastMessage;
-              if (!isLastFromMe && !hasSeenLast && lastMessage.isNotEmpty) {
-                subtitle = "New: $lastMessage";
-              }
+              // Formatting
+              String subtitle = lastMessage.isEmpty
+                  ? "No messages yet"
+                  : (!isLastFromMe && !hasSeenLast ? "New: $lastMessage" : lastMessage);
 
-              String timeString = "";
-              if (time != null) {
+              String timestamp = "";
+              if (ts != null) {
+                final time = ts.toDate();
                 final now = DateTime.now();
-                if (now.difference(time).inDays == 0) {
-                  // Same day -> HH:mm
-                  timeString =
-                      "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}";
-                } else {
-                  // Show MM/DD
-                  timeString = "${time.month}/${time.day}";
-                }
+
+                timestamp = now.difference(time).inDays == 0
+                    ? "${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}"
+                    : "${time.month}/${time.day}";
               }
 
               return FutureBuilder<DocumentSnapshot>(
@@ -96,12 +83,11 @@ class MessagesPage extends StatelessWidget {
                 builder: (context, userSnap) {
                   String email = "Unknown user";
                   if (userSnap.hasData && userSnap.data!.exists) {
-                    final udata = userSnap.data!.data()
-                        as Map<String, dynamic>? ?? <String, dynamic>{};
-                    email = udata['email'] ?? email;
+                    final userData = userSnap.data!.data() as Map<String, dynamic>? ?? {};
+                    email = userData['email'] ?? email;
                   }
 
-                  final bool showUnreadDot =
+                  final showUnreadDot =
                       !isLastFromMe && !hasSeenLast && lastMessage.isNotEmpty;
 
                   return ListTile(
@@ -122,7 +108,7 @@ class MessagesPage extends StatelessWidget {
                                 shape: BoxShape.circle,
                               ),
                             ),
-                          ),
+                          )
                       ],
                     ),
                     title: Text(email),
@@ -132,7 +118,7 @@ class MessagesPage extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     trailing: Text(
-                      timeString,
+                      timestamp,
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     onTap: () {
