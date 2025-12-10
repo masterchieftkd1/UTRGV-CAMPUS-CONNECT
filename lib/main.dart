@@ -26,11 +26,10 @@ class MyApp extends StatelessWidget {
       title: 'UTRGV Campus Connect',
       debugShowCheckedModeBanner: false,
 
-      // Start screen listens to auth state
-      home: const AuthScreen(),
+      initialRoute: '/login',
 
       routes: {
-        '/login': (context) => const AuthScreen(), 
+        '/login': (context) => const AuthScreen(),
         '/home': (context) => const HomePage(),
         '/profile': (context) => const ProfileScreen(),
         '/friends': (context) => const FriendsPage(),

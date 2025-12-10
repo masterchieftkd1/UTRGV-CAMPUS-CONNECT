@@ -66,7 +66,7 @@ class HomePage extends StatelessWidget {
               if (!context.mounted) return;
               Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
             },
-           ),
+          ),
         ],
       ),
 
