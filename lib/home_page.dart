@@ -64,9 +64,9 @@ class HomePage extends StatelessWidget {
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
               if (!context.mounted) return;
-              Navigator.pushReplacementNamed(context, '/login');
+              Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
             },
-          ),
+           ),
         ],
       ),
 
