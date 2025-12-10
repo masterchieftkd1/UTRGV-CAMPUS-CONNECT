@@ -22,6 +22,7 @@ class HomePage extends StatelessWidget {
           // 🔍 Search users
           IconButton(
             icon: const Icon(Icons.search),
+            tooltip: "Search",
             onPressed: () {
               Navigator.push(
                 context,
@@ -35,6 +36,7 @@ class HomePage extends StatelessWidget {
           // 💬 Messages inbox
           IconButton(
             icon: const Icon(Icons.message),
+            tooltip: "Messages",
             onPressed: () {
               Navigator.push(
                 context,
@@ -48,6 +50,7 @@ class HomePage extends StatelessWidget {
           // 👤 Profile
           IconButton(
             icon: const Icon(Icons.person),
+            tooltip: "Profile",
             onPressed: () {
               Navigator.push(
                 context,
@@ -61,10 +64,12 @@ class HomePage extends StatelessWidget {
           // 🚪 Logout
           IconButton(
             icon: const Icon(Icons.logout),
+            tooltip: "Logout",
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
               if (!context.mounted) return;
-              Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+              Navigator.pushNamedAndRemoveUntil(
+                  context, '/login', (route) => false);
             },
           ),
         ],
