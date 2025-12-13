@@ -1,19 +1,17 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-// Screens
+import 'firebase_options.dart';
 import 'auth_screen.dart';
-import 'home_page.dart';
-import 'profile_screen.dart';
-import 'view_profile_screen.dart';
-import 'friends_page.dart';
-import 'messages_inbox_screen.dart';  // ✅ FIXED
-import 'chat_screen.dart';
+import 'home_page.dart'; // <-- this is your bottom-nav Explore/ForYou shell
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
@@ -26,38 +24,31 @@ class MyApp extends StatelessWidget {
       title: 'UTRGV Campus Connect',
       debugShowCheckedModeBanner: false,
 
-      // 🔥 FIX: User should not manually go to /login every time
-      home: const AuthScreen(),
+      // 🔑 AUTH STATE HANDLER
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          // waiting for Firebase
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
 
+          // not logged in
+          if (!snapshot.hasData) {
+            return const AuthScreen();
+          }
+
+          // logged in
+          return const HomePage();
+        },
+      ),
+
+      // ✅ EXPLICIT ROUTES (THIS FIXES YOUR ERROR)
       routes: {
-        '/home': (context) => const HomePage(),
-        '/profile': (context) => const ProfileScreen(),
-        '/friends': (context) => const FriendsPage(),
-
-        // 🔥 FIXED — Proper messages page
-        '/messages': (context) => const MessagesInboxScreen(),
-      },
-
-      // Routes that need arguments
-      onGenerateRoute: (settings) {
-        if (settings.name == '/viewProfile') {
-          final userId = settings.arguments as String;
-          return MaterialPageRoute(
-            builder: (_) => ViewProfileScreen(userId: userId),
-          );
-        }
-
-        if (settings.name == '/chat') {
-          final args = settings.arguments as Map<String, dynamic>;
-          return MaterialPageRoute(
-            builder: (_) => ChatScreen(
-              otherUserId: args['userId'],
-              otherUserEmail: args['email'] ?? 'User',
-            ),
-          );
-        }
-
-        return null;
+        '/home': (_) => const HomePage(),
+        '/login': (_) => const AuthScreen(),
       },
     );
   }
