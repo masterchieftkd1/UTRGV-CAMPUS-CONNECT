@@ -5,7 +5,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'firebase_options.dart';
 import 'auth_screen.dart';
-import 'home_page.dart'; // <-- this is your bottom-nav Explore/ForYou shell
+import 'home_page.dart';
+import 'profile_screen.dart';
+import 'friends_page.dart';
+import 'messages_inbox_screen.dart';
+import 'view_profile_screen.dart';
+import 'chat_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,27 +33,52 @@ class MyApp extends StatelessWidget {
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
-          // waiting for Firebase
+          // Waiting for Firebase
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
 
-          // not logged in
+          // Not logged in
           if (!snapshot.hasData) {
             return const AuthScreen();
           }
 
-          // logged in
+          // Logged in
           return const HomePage();
         },
       ),
 
-      // ✅ EXPLICIT ROUTES (THIS FIXES YOUR ERROR)
+      // ✅ NAMED ROUTES
       routes: {
-        '/home': (_) => const HomePage(),
         '/login': (_) => const AuthScreen(),
+        '/home': (_) => const HomePage(),
+        '/profile': (_) => const ProfileScreen(),
+        '/friends': (_) => const FriendsPage(),
+        '/messages': (_) => const MessagesInboxScreen(),
+      },
+
+      // ✅ ROUTES WITH ARGUMENTS
+      onGenerateRoute: (settings) {
+        if (settings.name == '/viewProfile') {
+          final userId = settings.arguments as String;
+          return MaterialPageRoute(
+            builder: (_) => ViewProfileScreen(userId: userId),
+          );
+        }
+
+        if (settings.name == '/chat') {
+          final args = settings.arguments as Map<String, dynamic>;
+          return MaterialPageRoute(
+            builder: (_) => ChatScreen(
+              otherUserId: args['userId'],
+              otherUserEmail: args['email'] ?? 'User',
+            ),
+          );
+        }
+
+        return null;
       },
     );
   }

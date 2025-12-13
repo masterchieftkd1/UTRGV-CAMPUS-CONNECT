@@ -19,10 +19,21 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _index = 0;
 
-  final _pages = const [
+  final List<Widget> _pages = const [
     ExplorePage(),
     ForYouPage(),
   ];
+
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    if (!mounted) return;
+
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/login',
+      (route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +45,7 @@ class _HomePageState extends State<HomePage> {
           // 🔍 Search users
           IconButton(
             icon: const Icon(Icons.search),
+            tooltip: "Search",
             onPressed: () {
               Navigator.push(
                 context,
@@ -47,6 +59,7 @@ class _HomePageState extends State<HomePage> {
           // 💬 Messages
           IconButton(
             icon: const Icon(Icons.message),
+            tooltip: "Messages",
             onPressed: () {
               Navigator.push(
                 context,
@@ -60,6 +73,7 @@ class _HomePageState extends State<HomePage> {
           // 👤 Profile
           IconButton(
             icon: const Icon(Icons.person),
+            tooltip: "Profile",
             onPressed: () {
               Navigator.push(
                 context,
@@ -73,9 +87,8 @@ class _HomePageState extends State<HomePage> {
           // 🚪 Logout
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-            },
+            tooltip: "Logout",
+            onPressed: _logout,
           ),
         ],
       ),
