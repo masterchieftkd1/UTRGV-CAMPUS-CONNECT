@@ -17,7 +17,9 @@ class PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUid = FirebaseAuth.instance.currentUser!.uid;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return const SizedBox.shrink();
+    final currentUid = user.uid;
 
     final authorId = (data['authorId'] ?? '').toString();
     final authorEmail = (data['authorEmail'] ?? 'Unknown').toString();
@@ -29,7 +31,6 @@ class PostCard extends StatelessWidget {
 
     final List likedBy = (data['likedBy'] ?? <dynamic>[]) as List;
     final bool isLiked = likedBy.contains(currentUid);
-
     final bool isMine = authorId == currentUid;
 
     return Card(
@@ -39,7 +40,6 @@ class PostCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: author + menu
             Row(
               children: [
                 const CircleAvatar(
@@ -54,7 +54,8 @@ class PostCard extends StatelessWidget {
                         : () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => ViewProfileScreen(userId: authorId),
+                                builder: (_) =>
+                                    ViewProfileScreen(userId: authorId),
                               ),
                             ),
                     child: Text(
@@ -74,11 +75,13 @@ class PostCard extends StatelessWidget {
                             content: const Text('This cannot be undone.'),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.pop(context, false),
+                                onPressed: () =>
+                                    Navigator.pop(context, false),
                                 child: const Text('Cancel'),
                               ),
                               TextButton(
-                                onPressed: () => Navigator.pop(context, true),
+                                onPressed: () =>
+                                    Navigator.pop(context, true),
                                 child: const Text('Delete'),
                               ),
                             ],
@@ -94,27 +97,26 @@ class PostCard extends StatelessWidget {
                       }
                     },
                     itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Delete'),
+                      ),
                     ],
                   ),
               ],
             ),
-
             const SizedBox(height: 10),
-
-            if (text.isNotEmpty) Text(text, style: const TextStyle(fontSize: 16)),
-
+            if (text.isNotEmpty)
+              Text(text, style: const TextStyle(fontSize: 16)),
             if (imageUrl != null && imageUrl.isNotEmpty) ...[
               const SizedBox(height: 10),
               GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => _FullScreenImage(url: imageUrl),
-                    ),
-                  );
-                },
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => _FullScreenImage(url: imageUrl),
+                  ),
+                ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: AspectRatio(
@@ -124,7 +126,8 @@ class PostCard extends StatelessWidget {
                       fit: BoxFit.cover,
                       loadingBuilder: (c, w, p) {
                         if (p == null) return w;
-                        return const Center(child: CircularProgressIndicator());
+                        return const Center(
+                            child: CircularProgressIndicator());
                       },
                       errorBuilder: (_, __, ___) => Container(
                         color: Colors.black12,
@@ -136,10 +139,7 @@ class PostCard extends StatelessWidget {
                 ),
               ),
             ],
-
             const SizedBox(height: 8),
-
-            // Actions row: like + comments
             Row(
               children: [
                 IconButton(
@@ -160,7 +160,8 @@ class PostCard extends StatelessWidget {
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => CommentsScreen(postId: postId),
+                      builder: (_) =>
+                          CommentsScreen(postId: postId),
                     ),
                   ),
                 ),
@@ -215,7 +216,8 @@ class _FullScreenImage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.black,
         iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text('Photo', style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Photo', style: TextStyle(color: Colors.white)),
       ),
       body: Center(
         child: InteractiveViewer(
