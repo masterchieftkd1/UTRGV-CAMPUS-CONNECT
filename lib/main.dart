@@ -29,37 +29,42 @@ class MyApp extends StatelessWidget {
       title: 'UTRGV Campus Connect',
       debugShowCheckedModeBanner: false,
 
-      // 🔑 AUTH STATE HANDLER
+      // 🌗 (Dark mode can be wired here later globally)
+      theme: ThemeData.light(),
+      darkTheme: ThemeData.dark(),
+      themeMode: ThemeMode.system,
+
+      // 🔐 AUTH STATE HANDLER
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snapshot) {
-          // Waiting for Firebase
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(
               body: Center(child: CircularProgressIndicator()),
             );
           }
 
-          // Not logged in
           if (!snapshot.hasData) {
             return const AuthScreen();
           }
 
-          // Logged in
           return const HomePage();
         },
       ),
 
-      // ✅ NAMED ROUTES
+      // ✅ REGISTER ALL ROUTES HERE
       routes: {
         '/login': (_) => const AuthScreen(),
         '/home': (_) => const HomePage(),
         '/profile': (_) => const ProfileScreen(),
+
+        // 🔥 THIS WAS MISSING → CAUSING YOUR ERROR
         '/friends': (_) => const FriendsPage(),
+
         '/messages': (_) => const MessagesInboxScreen(),
       },
 
-      // ✅ ROUTES WITH ARGUMENTS
+      // 🧭 ROUTES WITH ARGUMENTS
       onGenerateRoute: (settings) {
         if (settings.name == '/viewProfile') {
           final userId = settings.arguments as String;

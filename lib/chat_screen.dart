@@ -1,12 +1,6 @@
-// lib/chat_screen.dart
-import 'dart:async';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:image_picker/image_picker.dart';
 
 class ChatScreen extends StatefulWidget {
   final String otherUserId;
@@ -23,228 +17,158 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final _auth = FirebaseAuth.instance;
-  final _messageController = TextEditingController();
-  final _picker = ImagePicker();
-  Timer? _typingTimer;
-
-  String get _myUid => _auth.currentUser!.uid;
-
-  String get _chatId {
-    final ids = [_myUid, widget.otherUserId]..sort();
-    return '${ids[0]}_${ids[1]}';
-  }
+  final _controller = TextEditingController();
+  final uid = FirebaseAuth.instance.currentUser!.uid;
+  late String roomId;
 
   @override
   void initState() {
     super.initState();
-    _ensureRoom();
-    _markSeen();
+    roomId = _getRoomId(uid, widget.otherUserId);
+    _setTyping(false);
   }
 
   @override
   void dispose() {
-    _typingTimer?.cancel();
     _setTyping(false);
-    _messageController.dispose();
     super.dispose();
   }
 
-  // --------------------------------------------------
-  // CHAT ROOM SETUP
-  // --------------------------------------------------
-  Future<void> _ensureRoom() async {
-    final ref =
-        FirebaseFirestore.instance.collection('chatRooms').doc(_chatId);
-
-    final snap = await ref.get();
-    if (!snap.exists) {
-      await ref.set({
-        'participants': [_myUid, widget.otherUserId],
-        'typing': {
-          _myUid: false,
-          widget.otherUserId: false,
-        },
-        'lastMessage': '',
-        'lastMessageFrom': '',
-        'lastMessageTime': FieldValue.serverTimestamp(),
-        'seenBy': [],
-      });
-    }
+  String _getRoomId(String a, String b) {
+    return a.compareTo(b) < 0 ? '${a}_$b' : '${b}_$a';
   }
 
-  // --------------------------------------------------
-  // TYPING
-  // --------------------------------------------------
-  Future<void> _setTyping(bool value) async {
+  Future<void> _setTyping(bool typing) async {
     await FirebaseFirestore.instance
         .collection('chatRooms')
-        .doc(_chatId)
+        .doc(roomId)
         .set({
-      'typing': {_myUid: value},
+      'typing': {uid: typing}
     }, SetOptions(merge: true));
   }
 
-  void _onTyping(String text) {
-    _typingTimer?.cancel();
-    final isTyping = text.trim().isNotEmpty;
-    _setTyping(isTyping);
-
-    if (isTyping) {
-      _typingTimer = Timer(const Duration(seconds: 2), () {
-        _setTyping(false);
-      });
-    }
-  }
-
-  // --------------------------------------------------
-  // SEND TEXT MESSAGE
-  // --------------------------------------------------
-  Future<void> _sendText() async {
-    final text = _messageController.text.trim();
+  Future<void> _sendMessage() async {
+    final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    _messageController.clear();
+    _controller.clear();
     _setTyping(false);
 
-    await _sendMessage(
-      text: text,
-      imageUrl: null,
-    );
-  }
-
-  // --------------------------------------------------
-  // SEND IMAGE MESSAGE
-  // --------------------------------------------------
-  Future<void> _sendImage() async {
-    final picked = await _picker.pickImage(source: ImageSource.gallery);
-    if (picked == null) return;
-
-    final file = File(picked.path);
-    final ref = FirebaseStorage.instance
-        .ref('chat_images/$_chatId/${DateTime.now().millisecondsSinceEpoch}.jpg');
-
-    await ref.putFile(file);
-    final url = await ref.getDownloadURL();
-
-    await _sendMessage(
-      text: '',
-      imageUrl: url,
-    );
-  }
-
-  // --------------------------------------------------
-  // COMMON SEND
-  // --------------------------------------------------
-  Future<void> _sendMessage({
-    required String text,
-    required String? imageUrl,
-  }) async {
     final roomRef =
-        FirebaseFirestore.instance.collection('chatRooms').doc(_chatId);
-
-    final msgRef = await roomRef.collection('messages').add({
-      'fromId': _myUid,
-      'toId': widget.otherUserId,
-      'text': text,
-      'imageUrl': imageUrl,
-      'createdAt': FieldValue.serverTimestamp(),
-      'seen': false,
-    });
+        FirebaseFirestore.instance.collection('chatRooms').doc(roomId);
 
     await roomRef.set({
-      'lastMessage': imageUrl != null ? '📷 Image' : text,
-      'lastMessageFrom': _myUid,
+      'participants': [uid, widget.otherUserId],
+      'lastMessage': text,
       'lastMessageTime': FieldValue.serverTimestamp(),
-      'lastMessageId': msgRef.id,
-      'seenBy': [_myUid],
     }, SetOptions(merge: true));
+
+    await roomRef.collection('messages').add({
+      'senderId': uid,
+      'text': text,
+      'createdAt': FieldValue.serverTimestamp(),
+      'seenBy': [uid],
+    });
   }
 
-  // --------------------------------------------------
-  // READ RECEIPTS
-  // --------------------------------------------------
-  Future<void> _markSeen() async {
-    final roomRef =
-        FirebaseFirestore.instance.collection('chatRooms').doc(_chatId);
-
-    final messages = await roomRef
-        .collection('messages')
-        .where('toId', isEqualTo: _myUid)
-        .where('seen', isEqualTo: false)
-        .get();
-
-    for (final doc in messages.docs) {
-      doc.reference.update({'seen': true});
+  void _markSeen(List<QueryDocumentSnapshot> messages) {
+    for (final doc in messages) {
+      final data = doc.data() as Map<String, dynamic>;
+      final List seenBy = data['seenBy'] ?? [];
+      if (!seenBy.contains(uid)) {
+        doc.reference.update({
+          'seenBy': FieldValue.arrayUnion([uid]),
+        });
+      }
     }
-
-    await roomRef.set({
-      'seenBy': FieldValue.arrayUnion([_myUid]),
-    }, SetOptions(merge: true));
   }
 
-  // --------------------------------------------------
-  // UI
-  // --------------------------------------------------
   @override
   Widget build(BuildContext context) {
+    final roomRef =
+        FirebaseFirestore.instance.collection('chatRooms').doc(roomId);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.otherUserEmail),
         backgroundColor: Colors.orange,
+        title: StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.otherUserId)
+              .snapshots(),
+          builder: (_, snap) {
+            final data =
+                snap.data?.data() as Map<String, dynamic>? ?? {};
+            final isOnline = data['isOnline'] ?? false;
+
+            return Row(
+              children: [
+                Text(widget.otherUserEmail),
+                const SizedBox(width: 8),
+                Icon(
+                  Icons.circle,
+                  size: 10,
+                  color: isOnline ? Colors.green : Colors.grey,
+                ),
+              ],
+            );
+          },
+        ),
       ),
       body: Column(
         children: [
-          // Typing indicator
+          // 🔴 Typing indicator
           StreamBuilder<DocumentSnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('chatRooms')
-                .doc(_chatId)
-                .snapshots(),
-            builder: (context, snap) {
-              if (!snap.hasData) return const SizedBox(height: 20);
-              final data =
-                  snap.data!.data() as Map<String, dynamic>? ?? {};
-              final typing = data['typing'] ?? {};
-              final otherTyping = typing[widget.otherUserId] == true;
+            stream: roomRef.snapshots(),
+            builder: (_, snap) {
+              final typing =
+                  (snap.data?.data() as Map<String, dynamic>?)?['typing']
+                          as Map<String, dynamic>? ??
+                      {};
+              final isTyping = typing[widget.otherUserId] == true;
 
-              return otherTyping
-                  ? const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text('Typing…',
-                            style: TextStyle(color: Colors.grey)),
-                      ),
-                    )
-                  : const SizedBox(height: 20);
+              if (!isTyping) return const SizedBox.shrink();
+              return const Padding(
+                padding: EdgeInsets.all(6),
+                child: Text(
+                  "Typing...",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              );
             },
           ),
 
-          // Messages
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('chatRooms')
-                  .doc(_chatId)
+              stream: roomRef
                   .collection('messages')
                   .orderBy('createdAt')
                   .snapshots(),
-              builder: (context, snap) {
-                if (!snap.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+              builder: (_, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(
+                      child: CircularProgressIndicator());
                 }
 
-                _markSeen();
-                final docs = snap.data!.docs;
+                final messages = snapshot.data!.docs;
+                _markSeen(messages);
 
                 return ListView.builder(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: docs.length,
-                  itemBuilder: (context, i) {
+                  itemCount: messages.length,
+                  itemBuilder: (_, index) {
                     final msg =
-                        docs[i].data() as Map<String, dynamic>;
-                    final isMe = msg['fromId'] == _myUid;
+                        messages[index].data() as Map<String, dynamic>;
+                    final isMe = msg['senderId'] == uid;
+                    final List seenBy = msg['seenBy'] ?? [];
+
+                    String status = '';
+                    if (isMe) {
+                      if (seenBy.contains(widget.otherUserId)) {
+                        status = 'Seen';
+                      } else {
+                        status = 'Delivered';
+                      }
+                    }
 
                     return Align(
                       alignment:
@@ -255,28 +179,35 @@ class _ChatScreenState extends State<ChatScreen> {
                             : CrossAxisAlignment.start,
                         children: [
                           Container(
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            padding: const EdgeInsets.all(10),
+                            margin: const EdgeInsets.all(6),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: isMe
-                                  ? Colors.orange.shade300
+                                  ? Colors.orange
                                   : Colors.grey.shade300,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius:
+                                  BorderRadius.circular(12),
                             ),
-                            child: msg['imageUrl'] != null
-                                ? Image.network(
-                                    msg['imageUrl'],
-                                    width: 200,
-                                  )
-                                : Text(msg['text'] ?? ''),
+                            child: Text(
+                              msg['text'],
+                              style: TextStyle(
+                                color: isMe
+                                    ? Colors.white
+                                    : Colors.black,
+                              ),
+                            ),
                           ),
-
-                          // Read receipt
-                          if (isMe)
-                            Text(
-                              msg['seen'] == true ? 'Seen' : 'Delivered',
-                              style: const TextStyle(
-                                  fontSize: 11, color: Colors.grey),
+                          if (status.isNotEmpty)
+                            Padding(
+                              padding:
+                                  const EdgeInsets.only(right: 8),
+                              child: Text(
+                                status,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
+                              ),
                             ),
                         ],
                       ),
@@ -287,30 +218,22 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
 
-          // Input bar
-          SafeArea(
+          Padding(
+            padding: const EdgeInsets.all(8),
             child: Row(
               children: [
-                IconButton(
-                  icon: const Icon(Icons.image),
-                  color: Colors.orange,
-                  onPressed: _sendImage,
-                ),
                 Expanded(
                   child: TextField(
-                    controller: _messageController,
-                    onChanged: _onTyping,
-                    onSubmitted: (_) => _sendText(),
+                    controller: _controller,
+                    onChanged: (v) => _setTyping(v.isNotEmpty),
                     decoration: const InputDecoration(
-                      hintText: 'Type a message…',
-                      contentPadding: EdgeInsets.all(12),
-                    ),
+                        hintText: 'Message...'),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.send),
-                  color: Colors.orange,
-                  onPressed: _sendText,
+                  icon: const Icon(Icons.send,
+                      color: Colors.orange),
+                  onPressed: _sendMessage,
                 ),
               ],
             ),

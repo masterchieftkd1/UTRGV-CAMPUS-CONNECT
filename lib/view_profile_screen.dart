@@ -29,10 +29,7 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
     final targetDoc = await fs.collection('users').doc(widget.userId).get();
     final currentDoc = await fs.collection('users').doc(currentUid).get();
 
-    return {
-      'target': targetDoc,
-      'current': currentDoc,
-    };
+    return {'target': targetDoc, 'current': currentDoc};
   }
 
   Future<void> _refresh() async {
@@ -41,108 +38,61 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
     });
   }
 
-  Future<void> _sendFriendRequest(String currentUid) async {
-    setState(() => _isActionLoading = true);
-    final fs = FirebaseFirestore.instance;
-
-    final batch = fs.batch();
-    final currentRef = fs.collection('users').doc(currentUid);
-    final targetRef = fs.collection('users').doc(widget.userId);
-
-    // You send request → outgoingRequests, they receive → incomingRequests
-    batch.update(currentRef, {
-      'outgoingRequests': FieldValue.arrayUnion([widget.userId]),
-    });
-    batch.update(targetRef, {
-      'incomingRequests': FieldValue.arrayUnion([currentUid]),
-    });
-
-    await batch.commit();
-    setState(() => _isActionLoading = false);
-    _refresh();
-  }
-
-  Future<void> _cancelFriendRequest(String currentUid) async {
-    setState(() => _isActionLoading = true);
-    final fs = FirebaseFirestore.instance;
-
-    final batch = fs.batch();
-    final currentRef = fs.collection('users').doc(currentUid);
-    final targetRef = fs.collection('users').doc(widget.userId);
-
-    batch.update(currentRef, {
-      'outgoingRequests': FieldValue.arrayRemove([widget.userId]),
-    });
-    batch.update(targetRef, {
-      'incomingRequests': FieldValue.arrayRemove([currentUid]),
-    });
-
-    await batch.commit();
-    setState(() => _isActionLoading = false);
-    _refresh();
-  }
-
-  Future<void> _acceptFriendRequest(String currentUid) async {
-    setState(() => _isActionLoading = true);
-    final fs = FirebaseFirestore.instance;
-
-    final batch = fs.batch();
-    final currentRef = fs.collection('users').doc(currentUid);
-    final targetRef = fs.collection('users').doc(widget.userId);
-
-    // Move from request → friend for both sides
-    batch.update(currentRef, {
-      'incomingRequests': FieldValue.arrayRemove([widget.userId]),
-      'friends': FieldValue.arrayUnion([widget.userId]),
-    });
-    batch.update(targetRef, {
-      'outgoingRequests': FieldValue.arrayRemove([currentUid]),
-      'friends': FieldValue.arrayUnion([currentUid]),
-    });
-
-    await batch.commit();
-    setState(() => _isActionLoading = false);
-    _refresh();
-  }
-
-  Future<void> _declineFriendRequest(String currentUid) async {
-    setState(() => _isActionLoading = true);
-    final fs = FirebaseFirestore.instance;
-
-    final batch = fs.batch();
-    final currentRef = fs.collection('users').doc(currentUid);
-    final targetRef = fs.collection('users').doc(widget.userId);
-
-    batch.update(currentRef, {
-      'incomingRequests': FieldValue.arrayRemove([widget.userId]),
-    });
-    batch.update(targetRef, {
-      'outgoingRequests': FieldValue.arrayRemove([currentUid]),
-    });
-
-    await batch.commit();
-    setState(() => _isActionLoading = false);
-    _refresh();
-  }
-
   Future<void> _removeFriend(String currentUid) async {
-    setState(() => _isActionLoading = true);
     final fs = FirebaseFirestore.instance;
-
     final batch = fs.batch();
+
     final currentRef = fs.collection('users').doc(currentUid);
     final targetRef = fs.collection('users').doc(widget.userId);
 
     batch.update(currentRef, {
       'friends': FieldValue.arrayRemove([widget.userId]),
     });
+
     batch.update(targetRef, {
       'friends': FieldValue.arrayRemove([currentUid]),
     });
 
     await batch.commit();
-    setState(() => _isActionLoading = false);
     _refresh();
+  }
+
+  Future<void> _blockUser(String currentUid) async {
+    final fs = FirebaseFirestore.instance;
+    final batch = fs.batch();
+
+    final currentRef = fs.collection('users').doc(currentUid);
+    final targetRef = fs.collection('users').doc(widget.userId);
+
+    batch.update(currentRef, {
+      'blockedUsers': FieldValue.arrayUnion([widget.userId]),
+      'friends': FieldValue.arrayRemove([widget.userId]),
+      'incomingRequests': FieldValue.arrayRemove([widget.userId]),
+      'outgoingRequests': FieldValue.arrayRemove([widget.userId]),
+    });
+
+    batch.update(targetRef, {
+      'friends': FieldValue.arrayRemove([currentUid]),
+      'incomingRequests': FieldValue.arrayRemove([currentUid]),
+      'outgoingRequests': FieldValue.arrayRemove([currentUid]),
+    });
+
+    await batch.commit();
+
+    if (mounted) {
+      Navigator.pop(context);
+    }
+  }
+
+  String _lastSeenText(bool isOnline, Timestamp? lastSeen) {
+    if (isOnline) return 'Online';
+    if (lastSeen == null) return 'Offline';
+
+    final diff = DateTime.now().difference(lastSeen.toDate());
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    return '${diff.inDays}d ago';
   }
 
   @override
@@ -169,87 +119,70 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
           final targetDoc = snapshot.data!['target']!;
           final currentDoc = snapshot.data!['current']!;
 
-          if (!targetDoc.exists) {
-            return const Center(child: Text("User not found."));
-          }
-
           final targetData =
-              targetDoc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
+              targetDoc.data() as Map<String, dynamic>? ?? {};
           final currentData =
-              currentDoc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
+              currentDoc.data() as Map<String, dynamic>? ?? {};
 
           final email = targetData['email'] ?? 'No Email';
-          final bio = targetData['bio'] ?? 'No bio available.';
-          final actualUid = targetData['uid'] ?? targetDoc.id;
+          final bio = targetData['bio'] ?? 'No bio';
+          final bool isOnline = targetData['isOnline'] ?? false;
+          final Timestamp? lastSeen = targetData['lastSeen'];
 
-          // Relationship arrays
-          final List<String> myFriends =
-              List<String>.from(currentData['friends'] ?? []);
-          final List<String> myIncoming =
-              List<String>.from(currentData['incomingRequests'] ?? []);
-          final List<String> myOutgoing =
-              List<String>.from(currentData['outgoingRequests'] ?? []);
-
-          // Target user's relationship data – for counts on THEIR profile
-          final List<String> targetFriends =
-              List<String>.from(targetData['friends'] ?? []);
-          final List<String> targetIncoming =
-              List<String>.from(targetData['incomingRequests'] ?? []);
-          final List<String> targetOutgoing =
-              List<String>.from(targetData['outgoingRequests'] ?? []);
-
-          // Counts for target user
-          final Set<String> targetFriendsSet =
-              targetFriends.map((e) => e.toString()).toSet();
-
-          final int targetFriendsCount = targetFriendsSet.length;
-          final int targetFollowersCount = targetIncoming
-              .map((e) => e.toString())
-              .where((id) => !targetFriendsSet.contains(id))
-              .length;
-          final int targetFollowingCount = targetOutgoing
-              .map((e) => e.toString())
-              .where((id) => !targetFriendsSet.contains(id))
-              .length;
-
+          final List myFriends =
+              List.from(currentData['friends'] ?? []);
           final bool isSelf = widget.userId == currentUid;
           final bool isFriend = myFriends.contains(widget.userId);
-          final bool requestReceived = myIncoming.contains(widget.userId);
-          final bool requestSent = myOutgoing.contains(widget.userId);
 
-          Widget actionArea = const SizedBox.shrink();
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 60,
+                  backgroundColor: Colors.orange,
+                  child: const Icon(Icons.person,
+                      size: 70, color: Colors.white),
+                ),
+                const SizedBox(height: 20),
 
-          if (!isSelf && currentUid != null) {
-            if (isFriend) {
-              // Already friends
-              actionArea = Column(
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: _isActionLoading
-                        ? null
-                        : () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => ChatScreen(
-                                  otherUserId: widget.userId,
-                                  otherUserEmail: email.toString(),
-                                ),
-                              ),
-                            );
-                          },
-                    icon: const Icon(Icons.message),
-                    label: const Text("Message"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      minimumSize: const Size(double.infinity, 45),
+                Text(email,
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.bold)),
+
+                const SizedBox(height: 6),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.circle,
+                        size: 10,
+                        color: isOnline ? Colors.green : Colors.grey),
+                    const SizedBox(width: 6),
+                    Text(
+                      _lastSeenText(isOnline, lastSeen),
+                      style: const TextStyle(color: Colors.black54),
                     ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 10),
+                  child: Text(bio),
+                ),
+
+                const SizedBox(height: 30),
+
+                if (!isSelf && isFriend)
                   ElevatedButton.icon(
-                    onPressed: _isActionLoading
-                        ? null
-                        : () => _removeFriend(currentUid),
+                    onPressed: () => _removeFriend(currentUid!),
                     icon: const Icon(Icons.person_remove),
                     label: const Text("Remove Friend"),
                     style: ElevatedButton.styleFrom(
@@ -257,162 +190,49 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                       minimumSize: const Size(double.infinity, 45),
                     ),
                   ),
-                ],
-              );
-            } else if (requestReceived) {
-              // They requested you
-              actionArea = Column(
-                children: [
+
+                if (!isSelf)
+                  const SizedBox(height: 10),
+
+                if (!isSelf)
                   ElevatedButton.icon(
-                    onPressed: _isActionLoading
-                        ? null
-                        : () => _acceptFriendRequest(currentUid),
-                    icon: const Icon(Icons.check),
-                    label: const Text("Accept Friend Request"),
+                    onPressed: () => _blockUser(currentUid!),
+                    icon: const Icon(Icons.block),
+                    label: const Text("Block User"),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: Colors.black,
                       minimumSize: const Size(double.infinity, 45),
                     ),
                   ),
+
+                if (!isSelf && isFriend)
                   const SizedBox(height: 10),
+
+                if (!isSelf && isFriend)
                   ElevatedButton.icon(
-                    onPressed: _isActionLoading
-                        ? null
-                        : () => _declineFriendRequest(currentUid),
-                    icon: const Icon(Icons.close),
-                    label: const Text("Decline"),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatScreen(
+                            otherUserId: widget.userId,
+                            otherUserEmail: email,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.message),
+                    label: const Text("Message"),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey,
+                      backgroundColor: Colors.orange,
                       minimumSize: const Size(double.infinity, 45),
                     ),
                   ),
-                ],
-              );
-            } else if (requestSent) {
-              // You requested them
-              actionArea = ElevatedButton.icon(
-                onPressed: _isActionLoading
-                    ? null
-                    : () => _cancelFriendRequest(currentUid),
-                icon: const Icon(Icons.hourglass_top),
-                label: const Text("Cancel Friend Request"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueGrey,
-                  minimumSize: const Size(double.infinity, 45),
-                ),
-              );
-            } else {
-              // No relation yet → send friend request (and logically you're "following" them now)
-              actionArea = ElevatedButton.icon(
-                onPressed: _isActionLoading
-                    ? null
-                    : () => _sendFriendRequest(currentUid),
-                icon: const Icon(Icons.person_add),
-                label: const Text("Add Friend"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  minimumSize: const Size(double.infinity, 45),
-                ),
-              );
-            }
-          }
-
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.orange,
-                    child: const Icon(
-                      Icons.person,
-                      size: 70,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    email.toString(),
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    "User ID:\n$actualUid",
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // 🔥 Friends / Following / Followers row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _statItem("Friends", targetFriendsCount),
-                      _statItem("Following", targetFollowingCount),
-                      _statItem("Followers", targetFollowersCount),
-                    ],
-                  ),
-
-                  const SizedBox(height: 25),
-
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      bio.toString(),
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-
-                  if (isSelf)
-                    const Text(
-                      "This is your own profile.",
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  if (!isSelf) actionArea,
-                ],
-              ),
+              ],
             ),
           );
         },
       ),
-    );
-  }
-
-  Widget _statItem(String label, int count) {
-    return Column(
-      children: [
-        Text(
-          count.toString(),
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.black54,
-          ),
-        ),
-      ],
     );
   }
 }

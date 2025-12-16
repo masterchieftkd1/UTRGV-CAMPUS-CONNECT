@@ -9,91 +9,103 @@ class MessagesInboxScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String currentUid = FirebaseAuth.instance.currentUser!.uid;
+    final user = FirebaseAuth.instance.currentUser;
+
+    // Auth safety check
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final uid = user.uid;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Messages"),
+        title: const Text('Messages'),
         backgroundColor: Colors.orange,
       ),
-
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
-        .collection("chats")
-        .where("members", arrayContains: currentUid)
-        .snapshots(),
-
+            .collection('chatRooms')
+            .where('participants', arrayContains: uid)
+            .orderBy('lastMessageTime', descending: true) // ✅ MATCHES FIRESTORE
+            .snapshots(),
         builder: (context, snapshot) {
+          // Loading state
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("No conversations yet."));
+          // Error state
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                'Error loading messages:\n${snapshot.error}',
+                textAlign: TextAlign.center,
+              ),
+            );
           }
 
-          final rooms = snapshot.data!.docs;
+          final docs = snapshot.data?.docs ?? [];
+
+          if (docs.isEmpty) {
+            return const Center(
+              child: Text('No conversations yet.'),
+            );
+          }
 
           return ListView.builder(
-            itemCount: rooms.length,
+            itemCount: docs.length,
             itemBuilder: (context, index) {
-              final roomDoc = rooms[index];
-              final data = roomDoc.data() as Map<String, dynamic>? ?? {};
+              final room = docs[index];
+              final data = room.data() as Map<String, dynamic>;
 
-              final membersRaw = (data["members"] ?? []) as List;
-              final members =
-                  membersRaw.map((e) => e.toString()).toList();
-
-              if (members.length < 2) {
-                return const SizedBox.shrink();
-              }
-
-              final otherId =
-                  members.firstWhere((id) => id != currentUid);
-
-              final lastMsg = data["lastMessage"]?.toString() ?? "";
-              final lastFrom = data["lastSender"]?.toString() ?? "";
-
-              final preview = lastMsg.isEmpty
-                  ? "(No messages yet)"
-                  : (lastFrom == currentUid ? "You: $lastMsg" : lastMsg);
+              final List participants = data['participants'] ?? [];
+              final otherUserId =
+                  participants.firstWhere((id) => id != uid);
 
               return FutureBuilder<DocumentSnapshot>(
                 future: FirebaseFirestore.instance
-                    .collection("users")
-                    .doc(otherId)
+                    .collection('users')
+                    .doc(otherUserId)
                     .get(),
-
                 builder: (context, userSnap) {
-                  if (!userSnap.hasData) {
-                    return const ListTile(title: Text("Loading user..."));
+                  if (userSnap.connectionState ==
+                      ConnectionState.waiting) {
+                    return const ListTile(
+                      title: Text('Loading...'),
+                    );
+                  }
+
+                  if (!userSnap.hasData || !userSnap.data!.exists) {
+                    return const ListTile(
+                      title: Text('Unknown user'),
+                    );
                   }
 
                   final userData =
-                      userSnap.data!.data() as Map<String, dynamic>? ?? {};
+                      userSnap.data!.data() as Map<String, dynamic>;
 
                   final email =
-                      userData["email"]?.toString() ?? "Unknown User";
+                      userData['email'] ?? 'Unknown';
 
                   return ListTile(
                     leading: const CircleAvatar(
                       child: Icon(Icons.person),
-                      backgroundColor: Colors.orange,
                     ),
-
                     title: Text(email),
                     subtitle: Text(
-                      preview,
+                      data['lastMessage'] ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (_) => ChatScreen(
-                            otherUserId: otherId,
+                            otherUserId: otherUserId,
                             otherUserEmail: email,
                           ),
                         ),
