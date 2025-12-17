@@ -104,247 +104,272 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _bioController.text = bio ?? '';
           }
 
-          return Column(
-            children: [
-              const SizedBox(height: 16),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Column(
+              children: [
+                const SizedBox(height: 16),
 
-              /// PROFILE PHOTO
-              Stack(
-                children: [
-                  CircleAvatar(
-                    radius: 45,
-                    backgroundColor: Colors.orange.shade100,
-                    backgroundImage:
-                        photoUrl != null ? NetworkImage(photoUrl) : null,
-                    child: photoUrl == null
-                        ? const Icon(Icons.person, size: 50)
-                        : null,
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.orange),
-                      onPressed: () =>
-                          _pickAndUploadProfilePhoto(context, user),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              /// EMAIL
-              Text(
-                user.email ?? 'Unknown email',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 6),
-
-              /// BIO
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                /// PROFILE PHOTO
+                Stack(
                   children: [
-                    const Text(
-                      'Bio',
-                      style:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    CircleAvatar(
+                      radius: 45,
+                      backgroundColor: Colors.orange.shade100,
+                      backgroundImage:
+                          photoUrl != null ? NetworkImage(photoUrl) : null,
+                      child: photoUrl == null
+                          ? const Icon(Icons.person, size: 50)
+                          : null,
                     ),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: _bioController,
-                      maxLines: 3,
-                      decoration: InputDecoration(
-                        hintText: 'Tell us about yourself',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onChanged: (_) {
-                        setState(() => _bioDirty = true);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    ElevatedButton(
-                      onPressed: !_bioDirty
-                          ? null
-                          : () async {
-                              await userDoc.update({
-                                'bio': _bioController.text.trim(),
-                              });
-                              setState(() => _bioDirty = false);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Bio saved')),
-                              );
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        minimumSize: const Size(double.infinity, 40),
-                      ),
-                      child: const Text(
-                        'Save Bio',
-                        style: TextStyle(color: Colors.white),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: IconButton(
+                        icon:
+                            const Icon(Icons.edit, color: Colors.orange),
+                        onPressed: () =>
+                            _pickAndUploadProfilePhoto(context, user),
                       ),
                     ),
                   ],
                 ),
-              ),
 
-              const SizedBox(height: 6),
+                const SizedBox(height: 12),
 
-              /// ONLINE STATUS
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.circle,
-                    size: 10,
-                    color: isOnline ? Colors.green : Colors.grey,
+                /// EMAIL
+                Text(
+                  user.email ?? 'Unknown email',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    isOnline
-                        ? 'Online'
-                        : lastSeen == null
-                            ? 'Offline'
-                            : 'Last seen just now',
-                    style: const TextStyle(color: Colors.grey),
+                ),
+
+                const SizedBox(height: 6),
+
+                /// BIO
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Bio',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _bioController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText: 'Tell us about yourself',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        onChanged: (_) =>
+                            setState(() => _bioDirty = true),
+                      ),
+                      const SizedBox(height: 8),
+                      ElevatedButton(
+                        onPressed: !_bioDirty
+                            ? null
+                            : () async {
+                                await userDoc.update({
+                                  'bio':
+                                      _bioController.text.trim(),
+                                });
+                                setState(() => _bioDirty = false);
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(
+                                  const SnackBar(
+                                      content: Text('Bio saved')),
+                                );
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          minimumSize:
+                              const Size(double.infinity, 40),
+                        ),
+                        child: const Text(
+                          'Save Bio',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
 
-              const SizedBox(height: 20),
-              const Divider(),
+                const SizedBox(height: 6),
 
-              /// DARK MODE
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: ListTile(
-                  leading: const Icon(Icons.light_mode, color: Colors.orange),
-                  title: const Text('Dark Mode'),
-                  trailing: ValueListenableBuilder<ThemeMode>(
-                    valueListenable: themeNotifier,
-                    builder: (_, currentMode, __) {
-                      return Switch(
-                        value: currentMode == ThemeMode.dark,
-                        onChanged: (val) async {
-                          themeNotifier.value =
-                              val ? ThemeMode.dark : ThemeMode.light;
-                          final prefs =
-                              await SharedPreferences.getInstance();
-                          await prefs.setBool('isDarkMode', val);
+                /// ONLINE STATUS
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.circle,
+                      size: 10,
+                      color:
+                          isOnline ? Colors.green : Colors.grey,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      isOnline
+                          ? 'Online'
+                          : lastSeen == null
+                              ? 'Offline'
+                              : 'Last seen just now',
+                      style:
+                          const TextStyle(color: Colors.grey),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+                const Divider(),
+
+                /// DARK MODE
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20),
+                  child: ListTile(
+                    leading: const Icon(Icons.light_mode,
+                        color: Colors.orange),
+                    title: const Text('Dark Mode'),
+                    trailing:
+                        ValueListenableBuilder<ThemeMode>(
+                      valueListenable: themeNotifier,
+                      builder: (_, currentMode, __) {
+                        return Switch(
+                          value:
+                              currentMode == ThemeMode.dark,
+                          onChanged: (val) async {
+                            themeNotifier.value = val
+                                ? ThemeMode.dark
+                                : ThemeMode.light;
+                            final prefs =
+                                await SharedPreferences
+                                    .getInstance();
+                            await prefs.setBool(
+                                'isDarkMode', val);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ),
+
+                const Divider(),
+
+                /// ACTIONS
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    children: [
+                      _profileButton(
+                        icon: Icons.people,
+                        label: 'Friends List',
+                        onTap: () =>
+                            Navigator.pushNamed(
+                                context, '/friends'),
+                      ),
+                      _profileButton(
+                        icon: Icons.lock,
+                        label: 'Change Password',
+                        onTap: () async {
+                          if (user.email != null) {
+                            await FirebaseAuth.instance
+                                .sendPasswordResetEmail(
+                              email: user.email!,
+                            );
+                            ScaffoldMessenger.of(context)
+                                .showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'Password reset email sent'),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                      _profileButton(
+                        icon: Icons.delete,
+                        label: 'Delete Account',
+                        color: Colors.red,
+                        onTap: () async {
+                          await userDoc.delete();
+                          await user.delete();
+                          Navigator
+                              .pushReplacementNamed(
+                                  context, '/login');
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+                const Divider(),
+
+                /// POSTS
+                const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'My Posts',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+
+                /// FIXED HEIGHT POSTS LIST (NO OVERFLOW)
+                SizedBox(
+                  height: 300,
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: postsQuery.snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(
+                            child:
+                                CircularProgressIndicator());
+                      }
+
+                      final docs = snapshot.data!.docs;
+
+                      if (docs.isEmpty) {
+                        return const Center(
+                          child: Text(
+                              'You have not posted anything yet.'),
+                        );
+                      }
+
+                      return ListView.builder(
+                        itemCount: docs.length,
+                        itemBuilder: (context, index) {
+                          final data = docs[index].data()
+                              as Map<String, dynamic>? ??
+                              {};
+                          final text =
+                              data['text'] ?? '';
+
+                          return ListTile(
+                            leading:
+                                const Icon(Icons.article),
+                            title: Text(text),
+                          );
                         },
                       );
                     },
                   ),
                 ),
-              ),
-
-              const Divider(),
-
-              /// ACTIONS
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    _profileButton(
-                      icon: Icons.people,
-                      label: 'Friends List',
-                      onTap: () =>
-                          Navigator.pushNamed(context, '/friends'),
-                    ),
-                    _profileButton(
-                      icon: Icons.lock,
-                      label: 'Change Password',
-                      onTap: () async {
-                        if (user.email != null) {
-                          await FirebaseAuth.instance
-                              .sendPasswordResetEmail(
-                            email: user.email!,
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'Password reset email sent'),
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                    _profileButton(
-                      icon: Icons.delete,
-                      label: 'Delete Account',
-                      color: Colors.red,
-                      onTap: () async {
-                        await userDoc.delete();
-                        await user.delete();
-                        Navigator.pushReplacementNamed(
-                            context, '/login');
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-              const Divider(),
-
-              /// POSTS
-              const Padding(
-                padding: EdgeInsets.all(8),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'My Posts',
-                    style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: postsQuery.snapshots(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) {
-                      return const Center(
-                          child: CircularProgressIndicator());
-                    }
-
-                    final docs = snapshot.data!.docs;
-
-                    if (docs.isEmpty) {
-                      return const Center(
-                        child:
-                            Text('You have not posted anything yet.'),
-                      );
-                    }
-
-                    return ListView.builder(
-                      itemCount: docs.length,
-                      itemBuilder: (context, index) {
-                        final data = docs[index].data()
-                            as Map<String, dynamic>? ??
-                            {};
-                        final text = data['text'] ?? '';
-
-                        return ListTile(
-                          leading: const Icon(Icons.article),
-                          title: Text(text),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -359,7 +384,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }) {
     return ListTile(
       leading: Icon(icon, color: color ?? Colors.orange),
-      title: Text(label, style: TextStyle(color: color)),
+      title: Text(label,
+          style: TextStyle(color: color)),
       onTap: onTap,
     );
   }
