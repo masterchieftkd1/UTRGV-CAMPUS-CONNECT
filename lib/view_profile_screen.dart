@@ -177,20 +177,23 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
 
                 const SizedBox(height: 20),
 
-                /// 🌟 BIO DISPLAY
-                if (bio.isNotEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      bio,
-                      style: const TextStyle(fontSize: 16),
+                /// 🌟 BIO DISPLAY WITH PLACEHOLDER
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    bio.isNotEmpty ? bio : 'This user has not added a bio yet.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: bio.isNotEmpty ? Colors.black : Colors.grey,
+                      fontStyle: bio.isNotEmpty ? FontStyle.normal : FontStyle.italic,
                     ),
                   ),
+                ),
 
                 const SizedBox(height: 30),
 
