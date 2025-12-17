@@ -9,10 +9,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'main.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   static const String routeName = '/profile';
 
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final TextEditingController _bioController = TextEditingController();
+  bool _bioDirty = false;
 
   Future<void> _pickAndUploadProfilePhoto(
     BuildContext context,
@@ -45,14 +53,24 @@ class ProfileScreen extends StatelessWidget {
   }
 
   @override
+  void dispose() {
+    _bioController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return Scaffold(
         body: Center(
-            child: Text('Not logged in',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onBackground))),
+          child: Text(
+            'Not logged in',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onBackground,
+            ),
+          ),
+        ),
       );
     }
 
@@ -82,10 +100,15 @@ class ProfileScreen extends StatelessWidget {
           final String? photoUrl = data['photoUrl'];
           final String? bio = data['bio'];
 
+          if (!_bioDirty) {
+            _bioController.text = bio ?? '';
+          }
+
           return Column(
             children: [
               const SizedBox(height: 16),
 
+              /// PROFILE PHOTO
               Stack(
                 children: [
                   CircleAvatar(
@@ -108,8 +131,10 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ],
               ),
+
               const SizedBox(height: 12),
 
+              /// EMAIL
               Text(
                 user.email ?? 'Unknown email',
                 style: const TextStyle(
@@ -120,7 +145,7 @@ class ProfileScreen extends StatelessWidget {
 
               const SizedBox(height: 6),
 
-              /// 🌟 BIO FIELD
+              /// BIO
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -132,23 +157,41 @@ class ProfileScreen extends StatelessWidget {
                           TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 6),
-                    TextFormField(
-                      initialValue: bio ?? '',
+                    TextField(
+                      controller: _bioController,
                       maxLines: 3,
                       decoration: InputDecoration(
                         hintText: 'Tell us about yourself',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                            vertical: 8, horizontal: 12),
                       ),
-                      onFieldSubmitted: (val) async {
-                        await userDoc.update({'bio': val});
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Bio updated')),
-                        );
+                      onChanged: (_) {
+                        setState(() => _bioDirty = true);
                       },
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: !_bioDirty
+                          ? null
+                          : () async {
+                              await userDoc.update({
+                                'bio': _bioController.text.trim(),
+                              });
+                              setState(() => _bioDirty = false);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Bio saved')),
+                              );
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        minimumSize: const Size(double.infinity, 40),
+                      ),
+                      child: const Text(
+                        'Save Bio',
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ],
                 ),
@@ -156,6 +199,7 @@ class ProfileScreen extends StatelessWidget {
 
               const SizedBox(height: 6),
 
+              /// ONLINE STATUS
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -179,7 +223,7 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 20),
               const Divider(),
 
-              /// 🌗 DARK MODE SWITCH
+              /// DARK MODE
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: ListTile(
@@ -193,7 +237,8 @@ class ProfileScreen extends StatelessWidget {
                         onChanged: (val) async {
                           themeNotifier.value =
                               val ? ThemeMode.dark : ThemeMode.light;
-                          final prefs = await SharedPreferences.getInstance();
+                          final prefs =
+                              await SharedPreferences.getInstance();
                           await prefs.setBool('isDarkMode', val);
                         },
                       );
@@ -204,6 +249,7 @@ class ProfileScreen extends StatelessWidget {
 
               const Divider(),
 
+              /// ACTIONS
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -211,21 +257,22 @@ class ProfileScreen extends StatelessWidget {
                     _profileButton(
                       icon: Icons.people,
                       label: 'Friends List',
-                      onTap: () {
-                        Navigator.pushNamed(context, '/friends');
-                      },
+                      onTap: () =>
+                          Navigator.pushNamed(context, '/friends'),
                     ),
                     _profileButton(
                       icon: Icons.lock,
                       label: 'Change Password',
                       onTap: () async {
                         if (user.email != null) {
-                          await FirebaseAuth.instance.sendPasswordResetEmail(
+                          await FirebaseAuth.instance
+                              .sendPasswordResetEmail(
                             email: user.email!,
                           );
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Password reset email sent'),
+                              content: Text(
+                                  'Password reset email sent'),
                             ),
                           );
                         }
@@ -238,7 +285,8 @@ class ProfileScreen extends StatelessWidget {
                       onTap: () async {
                         await userDoc.delete();
                         await user.delete();
-                        Navigator.pushReplacementNamed(context, '/login');
+                        Navigator.pushReplacementNamed(
+                            context, '/login');
                       },
                     ),
                   ],
@@ -248,6 +296,7 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 20),
               const Divider(),
 
+              /// POSTS
               const Padding(
                 padding: EdgeInsets.all(8),
                 child: Align(
@@ -273,17 +322,17 @@ class ProfileScreen extends StatelessWidget {
 
                     if (docs.isEmpty) {
                       return const Center(
-                        child: Text(
-                          'You have not posted anything yet.',
-                        ),
+                        child:
+                            Text('You have not posted anything yet.'),
                       );
                     }
 
                     return ListView.builder(
                       itemCount: docs.length,
                       itemBuilder: (context, index) {
-                        final data =
-                            docs[index].data() as Map<String, dynamic>? ?? {};
+                        final data = docs[index].data()
+                            as Map<String, dynamic>? ??
+                            {};
                         final text = data['text'] ?? '';
 
                         return ListTile(
