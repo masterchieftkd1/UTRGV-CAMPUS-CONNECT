@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
 import 'auth_screen.dart';
@@ -11,16 +12,22 @@ import 'messages_inbox_screen.dart';
 import 'view_profile_screen.dart';
 import 'chat_screen.dart';
 
-void main() async {
+// 🌗 Global theme notifier
+ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // 🔄 Load saved theme from SharedPreferences
+  final prefs = await SharedPreferences.getInstance();
+  final isDark = prefs.getBool('isDarkMode') ?? false;
+  themeNotifier.value = isDark ? ThemeMode.dark : ThemeMode.light;
+
   runApp(const MyApp());
 }
-
-// Global theme notifier
-ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -29,17 +36,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
-      builder: (context, currentMode, _) {
+      builder: (_, currentMode, __) {
         return MaterialApp(
           title: 'UTRGV Campus Connect',
           debugShowCheckedModeBanner: false,
-
-          // 🌗 THEMES
           theme: ThemeData.light(),
           darkTheme: ThemeData.dark(),
           themeMode: currentMode,
-
-          // 🔐 AUTH STATE HANDLER
           home: StreamBuilder<User?>(
             stream: FirebaseAuth.instance.authStateChanges(),
             builder: (context, snapshot) {
@@ -48,16 +51,10 @@ class MyApp extends StatelessWidget {
                   body: Center(child: CircularProgressIndicator()),
                 );
               }
-
-              if (!snapshot.hasData) {
-                return const AuthScreen();
-              }
-
+              if (!snapshot.hasData) return const AuthScreen();
               return const HomePage();
             },
           ),
-
-          // ✅ REGISTER ALL ROUTES HERE
           routes: {
             '/login': (_) => const AuthScreen(),
             '/home': (_) => const HomePage(),
@@ -65,8 +62,6 @@ class MyApp extends StatelessWidget {
             '/friends': (_) => const FriendsPage(),
             '/messages': (_) => const MessagesInboxScreen(),
           },
-
-          // 🧭 ROUTES WITH ARGUMENTS
           onGenerateRoute: (settings) {
             if (settings.name == '/viewProfile') {
               final userId = settings.arguments as String;
@@ -74,7 +69,6 @@ class MyApp extends StatelessWidget {
                 builder: (_) => ViewProfileScreen(userId: userId),
               );
             }
-
             if (settings.name == '/chat') {
               final args = settings.arguments as Map<String, dynamic>;
               return MaterialPageRoute(
@@ -84,7 +78,6 @@ class MyApp extends StatelessWidget {
                 ),
               );
             }
-
             return null;
           },
         );

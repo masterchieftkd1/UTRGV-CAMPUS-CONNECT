@@ -5,8 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../main.dart'; // For themeNotifier
+import 'main.dart';
 
 class ProfileScreen extends StatelessWidget {
   static const String routeName = '/profile';
@@ -22,7 +23,6 @@ class ProfileScreen extends StatelessWidget {
       source: ImageSource.gallery,
       imageQuality: 80,
     );
-
     if (picked == null) return;
 
     final file = File(picked.path);
@@ -31,13 +31,9 @@ class ProfileScreen extends StatelessWidget {
         .child('profile_photos')
         .child('${user.uid}.jpg');
 
-    // Upload
     await storageRef.putFile(file);
-
-    // Get URL
     final downloadUrl = await storageRef.getDownloadURL();
 
-    // Save to Firestore
     await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
@@ -52,8 +48,8 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('Not logged in')),
+      return Scaffold(
+        body: Center(child: Text('Not logged in', style: TextStyle(color: Theme.of(context).colorScheme.onBackground))),
       );
     }
 
@@ -77,9 +73,7 @@ class ProfileScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final data =
-              snapshot.data!.data() as Map<String, dynamic>? ?? {};
-
+          final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
           final bool isOnline = data['isOnline'] ?? false;
           final Timestamp? lastSeen = data['lastSeen'];
           final String? photoUrl = data['photoUrl'];
@@ -88,7 +82,6 @@ class ProfileScreen extends StatelessWidget {
             children: [
               const SizedBox(height: 16),
 
-              /// PROFILE AVATAR
               Stack(
                 children: [
                   CircleAvatar(
@@ -111,10 +104,8 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 12),
 
-              /// EMAIL
               Text(
                 user.email ?? 'Unknown email',
                 style: const TextStyle(
@@ -125,7 +116,6 @@ class ProfileScreen extends StatelessWidget {
 
               const SizedBox(height: 6),
 
-              /// ONLINE STATUS
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -149,22 +139,20 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 20),
               const Divider(),
 
-              /// 🌗 DARK/LIGHT MODE SWITCH
+              /// 🌗 DARK MODE SWITCH
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: ListTile(
-                  leading: const Icon(Icons.light_mode, color: Colors.orange),
+                  leading:
+                      const Icon(Icons.light_mode, color: Colors.orange),
                   title: const Text('Dark Mode'),
-                  trailing: ValueListenableBuilder<ThemeMode>(
-                    valueListenable: themeNotifier,
-                    builder: (context, currentMode, _) {
-                      return Switch(
-                        value: currentMode == ThemeMode.dark,
-                        onChanged: (val) {
-                          themeNotifier.value =
-                              val ? ThemeMode.dark : ThemeMode.light;
-                        },
-                      );
+                  trailing: Switch(
+                    value: themeNotifier.value == ThemeMode.dark,
+                    onChanged: (val) async {
+                      themeNotifier.value =
+                          val ? ThemeMode.dark : ThemeMode.light;
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setBool('isDarkMode', val);
                     },
                   ),
                 ),
@@ -172,7 +160,6 @@ class ProfileScreen extends StatelessWidget {
 
               const Divider(),
 
-              /// ACTION BUTTONS
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
@@ -220,7 +207,6 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 20),
               const Divider(),
 
-              /// POSTS
               const Padding(
                 padding: EdgeInsets.all(8),
                 child: Align(
@@ -283,10 +269,7 @@ class ProfileScreen extends StatelessWidget {
   }) {
     return ListTile(
       leading: Icon(icon, color: color ?? Colors.orange),
-      title: Text(
-        label,
-        style: TextStyle(color: color),
-      ),
+      title: Text(label, style: TextStyle(color: color)),
       onTap: onTap,
     );
   }
