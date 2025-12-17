@@ -49,7 +49,10 @@ class ProfileScreen extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       return Scaffold(
-        body: Center(child: Text('Not logged in', style: TextStyle(color: Theme.of(context).colorScheme.onBackground))),
+        body: Center(
+            child: Text('Not logged in',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onBackground))),
       );
     }
 
@@ -143,16 +146,20 @@ class ProfileScreen extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: ListTile(
-                  leading:
-                      const Icon(Icons.light_mode, color: Colors.orange),
+                  leading: const Icon(Icons.light_mode, color: Colors.orange),
                   title: const Text('Dark Mode'),
-                  trailing: Switch(
-                    value: themeNotifier.value == ThemeMode.dark,
-                    onChanged: (val) async {
-                      themeNotifier.value =
-                          val ? ThemeMode.dark : ThemeMode.light;
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setBool('isDarkMode', val);
+                  trailing: ValueListenableBuilder<ThemeMode>(
+                    valueListenable: themeNotifier,
+                    builder: (_, currentMode, __) {
+                      return Switch(
+                        value: currentMode == ThemeMode.dark,
+                        onChanged: (val) async {
+                          themeNotifier.value =
+                              val ? ThemeMode.dark : ThemeMode.light;
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setBool('isDarkMode', val);
+                        },
+                      );
                     },
                   ),
                 ),
@@ -176,14 +183,12 @@ class ProfileScreen extends StatelessWidget {
                       label: 'Change Password',
                       onTap: () async {
                         if (user.email != null) {
-                          await FirebaseAuth.instance
-                              .sendPasswordResetEmail(
+                          await FirebaseAuth.instance.sendPasswordResetEmail(
                             email: user.email!,
                           );
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content:
-                                  Text('Password reset email sent'),
+                              content: Text('Password reset email sent'),
                             ),
                           );
                         }
@@ -196,8 +201,7 @@ class ProfileScreen extends StatelessWidget {
                       onTap: () async {
                         await userDoc.delete();
                         await user.delete();
-                        Navigator.pushReplacementNamed(
-                            context, '/login');
+                        Navigator.pushReplacementNamed(context, '/login');
                       },
                     ),
                   ],
@@ -241,8 +245,8 @@ class ProfileScreen extends StatelessWidget {
                     return ListView.builder(
                       itemCount: docs.length,
                       itemBuilder: (context, index) {
-                        final data = docs[index].data()
-                            as Map<String, dynamic>? ?? {};
+                        final data =
+                            docs[index].data() as Map<String, dynamic>? ?? {};
                         final text = data['text'] ?? '';
 
                         return ListTile(
