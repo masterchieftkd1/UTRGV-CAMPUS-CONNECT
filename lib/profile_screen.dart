@@ -1,11 +1,50 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ProfileScreen extends StatelessWidget {
   static const String routeName = '/profile';
 
   const ProfileScreen({super.key});
+
+  Future<void> _pickAndUploadProfilePhoto(
+    BuildContext context,
+    User user,
+  ) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+
+    if (picked == null) return;
+
+    final file = File(picked.path);
+    final storageRef = FirebaseStorage.instance
+        .ref()
+        .child('profile_photos')
+        .child('${user.uid}.jpg');
+
+    // Upload
+    await storageRef.putFile(file);
+
+    // Get URL
+    final downloadUrl = await storageRef.getDownloadURL();
+
+    // Save to Firestore
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .update({'photoUrl': downloadUrl});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Profile picture updated')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +80,7 @@ class ProfileScreen extends StatelessWidget {
 
           final bool isOnline = data['isOnline'] ?? false;
           final Timestamp? lastSeen = data['lastSeen'];
+          final String? photoUrl = data['photoUrl'];
 
           return Column(
             children: [
@@ -52,16 +92,19 @@ class ProfileScreen extends StatelessWidget {
                   CircleAvatar(
                     radius: 45,
                     backgroundColor: Colors.orange.shade100,
-                    child: const Icon(Icons.person, size: 50),
+                    backgroundImage:
+                        photoUrl != null ? NetworkImage(photoUrl) : null,
+                    child: photoUrl == null
+                        ? const Icon(Icons.person, size: 50)
+                        : null,
                   ),
                   Positioned(
                     bottom: 0,
                     right: 0,
                     child: IconButton(
                       icon: const Icon(Icons.edit, color: Colors.orange),
-                      onPressed: () {
-                        // hook for profile picture upload
-                      },
+                      onPressed: () =>
+                          _pickAndUploadProfilePhoto(context, user),
                     ),
                   ),
                 ],
@@ -159,8 +202,8 @@ class ProfileScreen extends StatelessWidget {
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'My Posts',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

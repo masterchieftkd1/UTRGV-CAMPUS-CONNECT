@@ -38,50 +38,50 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
     });
   }
 
-  Future<void> _removeFriend(String currentUid) async {
+  Future<void> _addFriend(String currentUid) async {
+    setState(() => _isActionLoading = true);
     final fs = FirebaseFirestore.instance;
-    final batch = fs.batch();
 
-    final currentRef = fs.collection('users').doc(currentUid);
-    final targetRef = fs.collection('users').doc(widget.userId);
-
-    batch.update(currentRef, {
-      'friends': FieldValue.arrayRemove([widget.userId]),
+    await fs.collection('users').doc(currentUid).update({
+      'outgoingRequests': FieldValue.arrayUnion([widget.userId]),
     });
 
-    batch.update(targetRef, {
+    await fs.collection('users').doc(widget.userId).update({
+      'incomingRequests': FieldValue.arrayUnion([currentUid]),
+    });
+
+    setState(() => _isActionLoading = false);
+    _refresh();
+  }
+
+  Future<void> _removeFriend(String currentUid) async {
+    setState(() => _isActionLoading = true);
+    final fs = FirebaseFirestore.instance;
+
+    final batch = fs.batch();
+    batch.update(fs.collection('users').doc(currentUid), {
+      'friends': FieldValue.arrayRemove([widget.userId]),
+    });
+    batch.update(fs.collection('users').doc(widget.userId), {
       'friends': FieldValue.arrayRemove([currentUid]),
     });
 
     await batch.commit();
+    setState(() => _isActionLoading = false);
     _refresh();
   }
 
   Future<void> _blockUser(String currentUid) async {
     final fs = FirebaseFirestore.instance;
-    final batch = fs.batch();
 
-    final currentRef = fs.collection('users').doc(currentUid);
-    final targetRef = fs.collection('users').doc(widget.userId);
-
-    batch.update(currentRef, {
+    await fs.collection('users').doc(currentUid).update({
       'blockedUsers': FieldValue.arrayUnion([widget.userId]),
       'friends': FieldValue.arrayRemove([widget.userId]),
       'incomingRequests': FieldValue.arrayRemove([widget.userId]),
       'outgoingRequests': FieldValue.arrayRemove([widget.userId]),
     });
 
-    batch.update(targetRef, {
-      'friends': FieldValue.arrayRemove([currentUid]),
-      'incomingRequests': FieldValue.arrayRemove([currentUid]),
-      'outgoingRequests': FieldValue.arrayRemove([currentUid]),
-    });
-
-    await batch.commit();
-
-    if (mounted) {
-      Navigator.pop(context);
-    }
+    if (mounted) Navigator.pop(context);
   }
 
   String _lastSeenText(bool isOnline, Timestamp? lastSeen) {
@@ -97,8 +97,7 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    final currentUid = currentUser?.uid;
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
       appBar: AppBar(
@@ -108,31 +107,23 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
       body: FutureBuilder<Map<String, DocumentSnapshot>>(
         future: _profileFuture,
         builder: (_, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (!snapshot.hasData) {
-            return const Center(child: Text("User not found."));
-          }
-
-          final targetDoc = snapshot.data!['target']!;
-          final currentDoc = snapshot.data!['current']!;
-
           final targetData =
-              targetDoc.data() as Map<String, dynamic>? ?? {};
+              snapshot.data!['target']!.data() as Map<String, dynamic>;
           final currentData =
-              currentDoc.data() as Map<String, dynamic>? ?? {};
+              snapshot.data!['current']!.data() as Map<String, dynamic>;
 
-          final email = targetData['email'] ?? 'No Email';
-          final bio = targetData['bio'] ?? 'No bio';
+          final email = targetData['email'] ?? '';
+          final bio = targetData['bio'] ?? '';
           final bool isOnline = targetData['isOnline'] ?? false;
           final Timestamp? lastSeen = targetData['lastSeen'];
 
-          final List myFriends =
-              List.from(currentData['friends'] ?? []);
+          final List friends = List.from(currentData['friends'] ?? []);
           final bool isSelf = widget.userId == currentUid;
-          final bool isFriend = myFriends.contains(widget.userId);
+          final bool isFriend = friends.contains(widget.userId);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -180,35 +171,20 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
 
                 const SizedBox(height: 30),
 
-                if (!isSelf && isFriend)
+                if (!isSelf && !isFriend)
                   ElevatedButton.icon(
-                    onPressed: () => _removeFriend(currentUid!),
-                    icon: const Icon(Icons.person_remove),
-                    label: const Text("Remove Friend"),
+                    onPressed: _isActionLoading
+                        ? null
+                        : () => _addFriend(currentUid!),
+                    icon: const Icon(Icons.person_add),
+                    label: const Text("Add Friend"),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
+                      backgroundColor: Colors.orange,
                       minimumSize: const Size(double.infinity, 45),
                     ),
                   ),
 
-                if (!isSelf)
-                  const SizedBox(height: 10),
-
-                if (!isSelf)
-                  ElevatedButton.icon(
-                    onPressed: () => _blockUser(currentUid!),
-                    icon: const Icon(Icons.block),
-                    label: const Text("Block User"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      minimumSize: const Size(double.infinity, 45),
-                    ),
-                  ),
-
-                if (!isSelf && isFriend)
-                  const SizedBox(height: 10),
-
-                if (!isSelf && isFriend)
+                if (!isSelf && isFriend) ...[
                   ElevatedButton.icon(
                     onPressed: () {
                       Navigator.push(
@@ -228,6 +204,30 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                       minimumSize: const Size(double.infinity, 45),
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    onPressed: () => _removeFriend(currentUid!),
+                    icon: const Icon(Icons.person_remove),
+                    label: const Text("Remove Friend"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      minimumSize: const Size(double.infinity, 45),
+                    ),
+                  ),
+                ],
+
+                if (!isSelf) ...[
+                  const SizedBox(height: 10),
+                  ElevatedButton.icon(
+                    onPressed: () => _blockUser(currentUid!),
+                    icon: const Icon(Icons.block),
+                    label: const Text("Block User"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      minimumSize: const Size(double.infinity, 45),
+                    ),
+                  ),
+                ],
               ],
             ),
           );
