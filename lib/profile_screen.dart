@@ -80,6 +80,7 @@ class ProfileScreen extends StatelessWidget {
           final bool isOnline = data['isOnline'] ?? false;
           final Timestamp? lastSeen = data['lastSeen'];
           final String? photoUrl = data['photoUrl'];
+          final String? bio = data['bio'];
 
           return Column(
             children: [
@@ -114,6 +115,42 @@ class ProfileScreen extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 6),
+
+              /// 🌟 BIO FIELD
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Bio',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      initialValue: bio ?? '',
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'Tell us about yourself',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8, horizontal: 12),
+                      ),
+                      onFieldSubmitted: (val) async {
+                        await userDoc.update({'bio': val});
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Bio updated')),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
 

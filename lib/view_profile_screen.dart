@@ -114,7 +114,6 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
           final targetSnapshot = snapshot.data?['target'];
           final currentSnapshot = snapshot.data?['current'];
 
-          // Check if targetSnapshot is null or document doesn't exist
           if (targetSnapshot == null || !targetSnapshot.exists) {
             return const Center(
               child: Text(
@@ -124,7 +123,6 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
             );
           }
 
-          // Check if currentSnapshot is null (shouldn't happen, but safe)
           if (currentSnapshot == null || !currentSnapshot.exists) {
             return const Center(
               child: Text(
@@ -179,15 +177,20 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
 
                 const SizedBox(height: 20),
 
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(12),
+                /// 🌟 BIO DISPLAY
+                if (bio.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      bio,
+                      style: const TextStyle(fontSize: 16),
+                    ),
                   ),
-                  child: Text(bio),
-                ),
 
                 const SizedBox(height: 30),
 
