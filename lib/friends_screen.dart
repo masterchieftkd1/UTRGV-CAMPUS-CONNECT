@@ -19,14 +19,14 @@ class FriendsScreen extends StatelessWidget {
         backgroundColor: Colors.orange,
       ),
 
-      body: StreamBuilder<DocumentSnapshot>(
+      body: StreamBuilder<DocumentSnapshot?>(
         stream: usersRef.doc(currentUid).snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
+          final data = snapshot.data?.data() as Map<String, dynamic>? ?? {};
 
           final List incoming = data["incomingRequests"] ?? [];
           final List outgoing = data["outgoingRequests"] ?? [];
@@ -106,13 +106,14 @@ class _IncomingRequestTile extends StatelessWidget {
     final currentUid = FirebaseAuth.instance.currentUser!.uid;
     final usersRef = FirebaseFirestore.instance.collection("users");
 
-    return FutureBuilder<DocumentSnapshot>(
+    return FutureBuilder<DocumentSnapshot?>(
       future: usersRef.doc(uid).get(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox();
+        if (!snapshot.hasData || snapshot.data == null || !snapshot.data!.exists) {
+          return const SizedBox();
+        }
 
-        final user =
-            snapshot.data!.data() as Map<String, dynamic>? ?? {};
+        final user = snapshot.data!.data() as Map<String, dynamic>? ?? {};
         final email = user["email"] ?? "Unknown";
 
         return Card(
@@ -146,8 +147,7 @@ class _IncomingRequestTile extends StatelessWidget {
                       "incomingRequests": FieldValue.arrayRemove([uid]),
                     });
                     await usersRef.doc(uid).update({
-                      "outgoingRequests":
-                          FieldValue.arrayRemove([currentUid]),
+                      "outgoingRequests": FieldValue.arrayRemove([currentUid]),
                     });
                   },
                 ),
@@ -174,13 +174,14 @@ class _OutgoingRequestTile extends StatelessWidget {
     final currentUid = FirebaseAuth.instance.currentUser!.uid;
     final usersRef = FirebaseFirestore.instance.collection("users");
 
-    return FutureBuilder<DocumentSnapshot>(
+    return FutureBuilder<DocumentSnapshot?>(
       future: usersRef.doc(uid).get(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox();
+        if (!snapshot.hasData || snapshot.data == null || !snapshot.data!.exists) {
+          return const SizedBox();
+        }
 
-        final user =
-            snapshot.data!.data() as Map<String, dynamic>? ?? {};
+        final user = snapshot.data!.data() as Map<String, dynamic>? ?? {};
         final email = user["email"] ?? "Unknown";
 
         return Card(
@@ -220,13 +221,14 @@ class _FriendTile extends StatelessWidget {
     final currentUid = FirebaseAuth.instance.currentUser!.uid;
     final usersRef = FirebaseFirestore.instance.collection("users");
 
-    return FutureBuilder<DocumentSnapshot>(
+    return FutureBuilder<DocumentSnapshot?>(
       future: usersRef.doc(uid).get(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) return const SizedBox();
+        if (!snapshot.hasData || snapshot.data == null || !snapshot.data!.exists) {
+          return const SizedBox();
+        }
 
-        final user =
-            snapshot.data!.data() as Map<String, dynamic>? ?? {};
+        final user = snapshot.data!.data() as Map<String, dynamic>? ?? {};
         final email = user["email"] ?? "Unknown";
 
         return Card(

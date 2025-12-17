@@ -104,17 +104,38 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
         title: const Text("User Profile"),
         backgroundColor: Colors.orange,
       ),
-      body: FutureBuilder<Map<String, DocumentSnapshot>>(
+      body: FutureBuilder<Map<String, DocumentSnapshot?>>(
         future: _profileFuture,
         builder: (_, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final targetData =
-              snapshot.data!['target']!.data() as Map<String, dynamic>;
-          final currentData =
-              snapshot.data!['current']!.data() as Map<String, dynamic>;
+          final targetSnapshot = snapshot.data?['target'];
+          final currentSnapshot = snapshot.data?['current'];
+
+          // Check if targetSnapshot is null or document doesn't exist
+          if (targetSnapshot == null || !targetSnapshot.exists) {
+            return const Center(
+              child: Text(
+                'User not found or has deleted their account.',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            );
+          }
+
+          // Check if currentSnapshot is null (shouldn't happen, but safe)
+          if (currentSnapshot == null || !currentSnapshot.exists) {
+            return const Center(
+              child: Text(
+                'Something went wrong. Try again later.',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            );
+          }
+
+          final targetData = targetSnapshot.data() as Map<String, dynamic>;
+          final currentData = currentSnapshot.data() as Map<String, dynamic>;
 
           final email = targetData['email'] ?? '';
           final bio = targetData['bio'] ?? '';
@@ -132,8 +153,7 @@ class _ViewProfileScreenState extends State<ViewProfileScreen> {
                 CircleAvatar(
                   radius: 60,
                   backgroundColor: Colors.orange,
-                  child: const Icon(Icons.person,
-                      size: 70, color: Colors.white),
+                  child: const Icon(Icons.person, size: 70, color: Colors.white),
                 ),
                 const SizedBox(height: 20),
 
