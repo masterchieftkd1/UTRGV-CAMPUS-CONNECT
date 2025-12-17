@@ -94,92 +94,126 @@ class _AuthScreenState extends State<AuthScreen> {
 
             return Scaffold(
               backgroundColor: isDark ? Colors.black : Colors.orange.shade50,
-              body: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(22),
-                  child: Column(
-                    children: [
-                      Icon(Icons.account_circle,
-                          size: 90,
-                          color: isDark ? Colors.orange.shade200 : Colors.orange),
-                      const SizedBox(height: 20),
-                      Text(
-                        _isLogin ? "Welcome Back 👋" : "Create Account 🧡",
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.orange.shade200 : Colors.orange,
-                        ),
-                      ),
-                      const SizedBox(height: 30),
-                      TextField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                        decoration: InputDecoration(
-                          labelText: "UTRGV Email",
-                          hintText: "example@utrgv.edu",
-                          labelStyle: TextStyle(
-                              color: isDark ? Colors.white70 : Colors.grey[700]),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+              body: Stack(
+                children: [
+                  Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(22),
+                      child: Column(
+                        children: [
+                          Icon(Icons.account_circle,
+                              size: 90,
+                              color: isDark
+                                  ? Colors.orange.shade200
+                                  : Colors.orange),
+                          const SizedBox(height: 20),
+                          Text(
+                            _isLogin ? "Welcome Back 👋" : "Create Account 🧡",
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? Colors.orange.shade200
+                                  : Colors.orange,
+                            ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                        decoration: InputDecoration(
-                          labelText: "Password",
-                          labelStyle: TextStyle(
-                              color: isDark ? Colors.white70 : Colors.grey[700]),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 25),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          minimumSize: const Size(double.infinity, 50),
-                        ),
-                        onPressed: _loading ? null : _handleAuth,
-                        child: _loading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                _isLogin ? "Login" : "Register",
-                                style: const TextStyle(
-                                    fontSize: 18, color: Colors.white),
+                          const SizedBox(height: 30),
+                          TextField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black),
+                            decoration: InputDecoration(
+                              labelText: "UTRGV Email",
+                              hintText: "example@utrgv.edu",
+                              labelStyle: TextStyle(
+                                  color: isDark ? Colors.white70 : Colors.grey[700]),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
                               ),
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          TextField(
+                            controller: _passwordController,
+                            obscureText: true,
+                            style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black),
+                            decoration: InputDecoration(
+                              labelText: "Password",
+                              labelStyle: TextStyle(
+                                  color: isDark ? Colors.white70 : Colors.grey[700]),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 25),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              minimumSize: const Size(double.infinity, 50),
+                            ),
+                            onPressed: _loading ? null : _handleAuth,
+                            child: _loading
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    _isLogin ? "Login" : "Register",
+                                    style: const TextStyle(
+                                        fontSize: 18, color: Colors.white),
+                                  ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextButton(
+                            onPressed: _loading
+                                ? null
+                                : () {
+                                    setState(() => _isLogin = !_isLogin);
+                                  },
+                            child: Text(
+                              _isLogin
+                                  ? "Don't have an account? Register"
+                                  : "Already have an account? Login",
+                              style: TextStyle(
+                                  color: isDark
+                                      ? Colors.orange.shade200
+                                      : Colors.orange),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 10),
-                      TextButton(
-                        onPressed: _loading
-                            ? null
-                            : () {
-                                setState(() => _isLogin = !_isLogin);
-                              },
-                        child: Text(
-                          _isLogin
-                              ? "Don't have an account? Register"
-                              : "Already have an account? Login",
-                          style: TextStyle(
-                              color: isDark ? Colors.orange.shade200 : Colors.orange),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+
+                  // 🔘 Dark/Light Mode Toggle at top-right
+                  Positioned(
+                    top: 40,
+                    right: 20,
+                    child: Row(
+                      children: [
+                        Icon(
+                          isDark ? Icons.dark_mode : Icons.light_mode,
+                          color: Colors.orange,
+                        ),
+                        Switch(
+                          value: isDark,
+                          activeColor: Colors.orange,
+                          onChanged: (val) {
+                            themeNotifier.value =
+                                val ? ThemeMode.dark : ThemeMode.light;
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             );
           },
