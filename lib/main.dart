@@ -1,4 +1,3 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,70 +19,75 @@ void main() async {
   runApp(const MyApp());
 }
 
+// Global theme notifier
+ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'UTRGV Campus Connect',
-      debugShowCheckedModeBanner: false,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, currentMode, _) {
+        return MaterialApp(
+          title: 'UTRGV Campus Connect',
+          debugShowCheckedModeBanner: false,
 
-      // 🌗 (Dark mode can be wired here later globally)
-      theme: ThemeData.light(),
-      darkTheme: ThemeData.dark(),
-      themeMode: ThemeMode.system,
+          // 🌗 THEMES
+          theme: ThemeData.light(),
+          darkTheme: ThemeData.dark(),
+          themeMode: currentMode,
 
-      // 🔐 AUTH STATE HANDLER
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
+          // 🔐 AUTH STATE HANDLER
+          home: StreamBuilder<User?>(
+            stream: FirebaseAuth.instance.authStateChanges(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
 
-          if (!snapshot.hasData) {
-            return const AuthScreen();
-          }
+              if (!snapshot.hasData) {
+                return const AuthScreen();
+              }
 
-          return const HomePage();
-        },
-      ),
+              return const HomePage();
+            },
+          ),
 
-      // ✅ REGISTER ALL ROUTES HERE
-      routes: {
-        '/login': (_) => const AuthScreen(),
-        '/home': (_) => const HomePage(),
-        '/profile': (_) => const ProfileScreen(),
+          // ✅ REGISTER ALL ROUTES HERE
+          routes: {
+            '/login': (_) => const AuthScreen(),
+            '/home': (_) => const HomePage(),
+            '/profile': (_) => const ProfileScreen(),
+            '/friends': (_) => const FriendsPage(),
+            '/messages': (_) => const MessagesInboxScreen(),
+          },
 
-        // 🔥 THIS WAS MISSING → CAUSING YOUR ERROR
-        '/friends': (_) => const FriendsPage(),
+          // 🧭 ROUTES WITH ARGUMENTS
+          onGenerateRoute: (settings) {
+            if (settings.name == '/viewProfile') {
+              final userId = settings.arguments as String;
+              return MaterialPageRoute(
+                builder: (_) => ViewProfileScreen(userId: userId),
+              );
+            }
 
-        '/messages': (_) => const MessagesInboxScreen(),
-      },
+            if (settings.name == '/chat') {
+              final args = settings.arguments as Map<String, dynamic>;
+              return MaterialPageRoute(
+                builder: (_) => ChatScreen(
+                  otherUserId: args['userId'],
+                  otherUserEmail: args['email'] ?? 'User',
+                ),
+              );
+            }
 
-      // 🧭 ROUTES WITH ARGUMENTS
-      onGenerateRoute: (settings) {
-        if (settings.name == '/viewProfile') {
-          final userId = settings.arguments as String;
-          return MaterialPageRoute(
-            builder: (_) => ViewProfileScreen(userId: userId),
-          );
-        }
-
-        if (settings.name == '/chat') {
-          final args = settings.arguments as Map<String, dynamic>;
-          return MaterialPageRoute(
-            builder: (_) => ChatScreen(
-              otherUserId: args['userId'],
-              otherUserEmail: args['email'] ?? 'User',
-            ),
-          );
-        }
-
-        return null;
+            return null;
+          },
+        );
       },
     );
   }

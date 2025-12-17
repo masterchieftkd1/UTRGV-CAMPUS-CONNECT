@@ -6,6 +6,8 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../main.dart'; // For themeNotifier
+
 class ProfileScreen extends StatelessWidget {
   static const String routeName = '/profile';
 
@@ -145,6 +147,29 @@ class ProfileScreen extends StatelessWidget {
               ),
 
               const SizedBox(height: 20),
+              const Divider(),
+
+              /// 🌗 DARK/LIGHT MODE SWITCH
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: ListTile(
+                  leading: const Icon(Icons.light_mode, color: Colors.orange),
+                  title: const Text('Dark Mode'),
+                  trailing: ValueListenableBuilder<ThemeMode>(
+                    valueListenable: themeNotifier,
+                    builder: (context, currentMode, _) {
+                      return Switch(
+                        value: currentMode == ThemeMode.dark,
+                        onChanged: (val) {
+                          themeNotifier.value =
+                              val ? ThemeMode.dark : ThemeMode.light;
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+
               const Divider(),
 
               /// ACTION BUTTONS
